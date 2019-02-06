@@ -268,9 +268,15 @@ func (wac *Conn) writeBinary(node binary.Node, metric metric, flag flag, tag str
 func (wac *Conn) readPump() {
 	defer wac.wsConn.Close()
 
-	for {
+	//gorilla websocket causes panic if number of errors is >= 1000
+	var error_count = 0
+
+	//reset connection before error count exceeds the websocket limit
+	for error_count <= 500 {
+
 		msgType, msg, err := wac.wsConn.ReadMessage()
 		if err != nil {
+			error_count++
 			wac.wsConnOK = false
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
 				wac.handle(fmt.Errorf("unexpected websocket close: %v", err))
@@ -298,9 +304,7 @@ func (wac *Conn) readPump() {
 		listener, hasListener := wac.listener[data[0]]
 		wac.listenerMutex.RUnlock()
 
-		if len(data[1]) == 0 {
-			continue
-		} else if hasListener {
+		if hasListener && len(data[1]) > 0 {
 			listener <- data[1]
 
 			wac.listenerMutex.Lock()
@@ -315,7 +319,9 @@ func (wac *Conn) readPump() {
 
 			wac.dispatch(message)
 		} else {
-			wac.handle(string(data[1]))
+			if len(data[1]) > 0 {
+				wac.handle(string(data[1]))
+			}
 		}
 
 	}
