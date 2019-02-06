@@ -153,8 +153,8 @@ func (wac *Conn) isConnected() bool {
 // connect should be guarded with wsConnMutex
 func (wac *Conn) connect() error {
 	dialer := &websocket.Dialer{
-		ReadBufferSize:   25 * 1024 * 1024,
-		WriteBufferSize:  10 * 1024 * 1024,
+		ReadBufferSize:   0,
+		WriteBufferSize:  0,
 		HandshakeTimeout: wac.msgTimeout,
 	}
 
