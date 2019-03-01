@@ -174,7 +174,7 @@ func (wac *Conn) connect() error {
 		// our close handling
 		if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
 			fmt.Println("Trigger reconnect")
-			go wac.reconnect()
+			go wac.Reconnect()
 		}
 		return nil
 	})
@@ -185,7 +185,7 @@ func (wac *Conn) connect() error {
 }
 
 // reconnect should be run as go routine
-func (wac *Conn) reconnect() {
+func (wac *Conn) Reconnect() {
 	wac.wsConnMutex.Lock()
 	wac.wsConn.Close()
 	wac.wsConn = nil
