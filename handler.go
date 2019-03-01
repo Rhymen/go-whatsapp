@@ -88,6 +88,18 @@ func (wac *Conn) AddHandler(handler Handler) {
 	wac.handler = append(wac.handler, handler)
 }
 
+// RemoveHandler removes a handler from the list
+func (wac *Conn) RemoveHandler(handler Handler) {
+	filtered := wac.handler[:0]
+	for _, x := range wac.handler {
+		if x != handler { // TODO will such comparison suffice?
+			filtered = append(filtered, x)
+		}
+	}
+
+	wac.handler = filtered
+}
+
 func (wac *Conn) handle(message interface{}) {
 	switch m := message.(type) {
 	case error:
