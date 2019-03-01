@@ -184,13 +184,18 @@ func (wac *Conn) connect() error {
 	return nil
 }
 
-// reconnect should be run as go routine
-func (wac *Conn) Reconnect() {
+func (wac *Conn) Close() {
 	wac.wsConnMutex.Lock()
+	defer wac.wsConnMutex.Unlock()
+
 	wac.wsConn.Close()
 	wac.wsConn = nil
 	wac.wsConnOK = false
-	wac.wsConnMutex.Unlock()
+}
+
+// reconnect should be run as go routine
+func (wac *Conn) Reconnect() {
+	wac.Close()
 
 	// wait up to 60 seconds and then reconnect. As writePump should send immediately, it might
 	// reconnect as well. So we check its existance before reconnecting
