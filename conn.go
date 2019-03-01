@@ -79,19 +79,20 @@ Conn is created by NewConn. Interacting with the initialized Conn is the main wa
 It holds all necessary information to make the package work internally.
 */
 type Conn struct {
-	wsConn         *websocket.Conn
-	wsConnOK       bool
-	wsConnMutex    sync.RWMutex
-	session        *Session
-	listener       map[string]chan string
-	listenerMutex  sync.RWMutex
-	writeChan      chan wsMsg
-	handler        []Handler
-	msgCount       int
-	msgTimeout     time.Duration
-	Info           *Info
-	Store          *Store
-	ServerLastSeen time.Time
+	wsConn              *websocket.Conn
+	wsConnOK            bool
+	wsConnMutex         sync.RWMutex
+	lastReconnectAtNano int64
+	session             *Session
+	listener            map[string]chan string
+	listenerMutex       sync.RWMutex
+	writeChan           chan wsMsg
+	handler             []Handler
+	msgCount            int
+	msgTimeout          time.Duration
+	Info                *Info
+	Store               *Store
+	ServerLastSeen      time.Time
 
 	longClientName  string
 	shortClientName string
@@ -195,6 +196,19 @@ func (wac *Conn) Close() {
 
 // reconnect should be run as go routine
 func (wac *Conn) Reconnect() {
+	// guard the whole process of reconnection so multiple processes won't disconnect and connect at the same time
+	// remember when the ask to reconnect came
+	reconnectThreadStart := time.Now().UnixNano()
+
+	wac.wsConnMutex.Lock()
+	defer wac.wsConnMutex.Unlock()
+
+	if reconnectThreadStart < wac.lastReconnectAtNano {
+		// we already reconnected since the ask came, drop it
+		return
+	}
+	wac.lastReconnectAtNano = reconnectThreadStart
+
 	wac.Close()
 
 	// wait up to 60 seconds and then reconnect. As writePump should send immediately, it might
@@ -202,14 +216,16 @@ func (wac *Conn) Reconnect() {
 	for !wac.isConnected() {
 		time.Sleep(time.Duration(rand.Intn(60)) * time.Second)
 
-		wac.wsConnMutex.Lock()
 		if wac.wsConn == nil {
 			if err := wac.connect(); err != nil {
 				fmt.Fprintf(os.Stderr, "could not reconnect to websocket: %v\n", err)
 			}
 		}
-		wac.wsConnMutex.Unlock()
 	}
+
+	// mark when we did last reconnect and allow processing of other reconnect threads
+	time.Sleep(time.Second * 1)
+	wac.lastReconnectAtNano = time.Now().UnixNano()
 }
 
 func (wac *Conn) write(data []interface{}) (<-chan string, error) {
