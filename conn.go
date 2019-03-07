@@ -189,9 +189,15 @@ func (wac *Conn) Close() {
 	wac.wsConnMutex.Lock()
 	defer wac.wsConnMutex.Unlock()
 
-	wac.wsConn.Close()
+	if !wac.isClosed() {
+		wac.wsConn.Close()
+	}
 	wac.wsConn = nil
 	wac.wsConnOK = false
+}
+
+func (wac *Conn) isClosed() bool {
+	return wac.wsConn == nil
 }
 
 // reconnect should be run as go routine
@@ -290,7 +296,14 @@ func (wac *Conn) readPump() {
 	defer wac.wsConn.Close()
 
 	for {
+		wac.wsConnMutex.RLock()
+		if wac.isClosed() {
+			return
+		}
+
 		msgType, msg, err := wac.wsConn.ReadMessage()
+		wac.wsConnMutex.RUnlock()
+
 		if err != nil {
 			wac.wsConnOK = false
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
@@ -347,6 +360,10 @@ func (wac *Conn) writePump() {
 		for !wac.isConnected() {
 			// reconnect to send the message ASAP
 			wac.wsConnMutex.Lock()
+			if wac.isClosed() {
+				return
+			}
+
 			if wac.wsConn == nil {
 				if err := wac.connect(); err != nil {
 					fmt.Fprintf(os.Stderr, "could not reconnect to websocket: %v\n", err)
@@ -380,7 +397,13 @@ func (wac *Conn) sendKeepAlive() {
 
 func (wac *Conn) keepAlive(minIntervalMs int, maxIntervalMs int) {
 	for {
+		wac.wsConnMutex.RLock()
+		if wac.isClosed() {
+			return
+		}
 		wac.sendKeepAlive()
+		wac.wsConnMutex.RUnlock()
+
 		interval := rand.Intn(maxIntervalMs-minIntervalMs) + minIntervalMs
 		<-time.After(time.Duration(interval) * time.Millisecond)
 	}
