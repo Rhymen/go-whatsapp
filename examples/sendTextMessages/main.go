@@ -32,9 +32,11 @@ func main() {
 		Text: "Message sent by github.com/Rhymen/go-whatsapp",
 	}
 
-	err = wac.Send(msg)
-	if err != nil {
+	errMsg,msgId := wac.Send(msg)
+	if errMsg != nil {
 		fmt.Fprintf(os.Stderr, "error sending message: %v", err)
+	} else {
+		fmt.Println("Message Sent -> ID : "+msgId)
 	}
 }
 
