@@ -14,6 +14,7 @@ import (
 )
 
 type MediaType string
+var msgInfo MessageInfo
 
 const (
 	MediaImage    MediaType = "WhatsApp Image Keys"
@@ -22,61 +23,75 @@ const (
 	MediaDocument MediaType = "WhatsApp Document Keys"
 )
 
-func (wac *Conn) Send(msg interface{}) error {
+func (wac *Conn) Send(msg interface{}) (error,string) {
 	var err error
 	var ch <-chan string
+	var msgProto *proto.WebMessageInfo
 
 	switch m := msg.(type) {
 	case *proto.WebMessageInfo:
 		ch, err = wac.sendProto(m)
 	case TextMessage:
-		ch, err = wac.sendProto(getTextProto(m))
+		msgProto = getTextProto(m)
+		msgInfo = getMessageInfo(msgProto)
+		ch, err = wac.sendProto(msgProto)
 	case ImageMessage:
 		m.url, m.mediaKey, m.fileEncSha256, m.fileSha256, m.fileLength, err = wac.Upload(m.Content, MediaImage)
 		if err != nil {
-			return fmt.Errorf("image upload failed: %v", err)
+			return fmt.Errorf("image upload failed: %v", err),"ERROR"
 		}
-		ch, err = wac.sendProto(getImageProto(m))
+		msgProto = getImageProto(m)
+		msgInfo = getMessageInfo(msgProto)
+		ch, err = wac.sendProto(msgProto)
 	case VideoMessage:
 		m.url, m.mediaKey, m.fileEncSha256, m.fileSha256, m.fileLength, err = wac.Upload(m.Content, MediaVideo)
 		if err != nil {
-			return fmt.Errorf("video upload failed: %v", err)
+			return fmt.Errorf("video upload failed: %v", err),"ERROR"
 		}
-		ch, err = wac.sendProto(getVideoProto(m))
+		msgProto = getVideoProto(m)
+		msgInfo = getMessageInfo(msgProto)
+		ch, err = wac.sendProto(msgProto)
 	case DocumentMessage:
 		m.url, m.mediaKey, m.fileEncSha256, m.fileSha256, m.fileLength, err = wac.Upload(m.Content, MediaDocument)
 		if err != nil {
-			return fmt.Errorf("document upload failed: %v", err)
+			return fmt.Errorf("document upload failed: %v", err),"ERROR"
 		}
-		ch, err = wac.sendProto(getDocumentProto(m))
+		msgProto = getDocumentProto(m)
+		msgInfo = getMessageInfo(msgProto)
+		ch, err = wac.sendProto(msgProto)
 	case AudioMessage:
 		m.url, m.mediaKey, m.fileEncSha256, m.fileSha256, m.fileLength, err = wac.Upload(m.Content, MediaAudio)
 		if err != nil {
-			return fmt.Errorf("audio upload failed: %v", err)
+			return fmt.Errorf("audio upload failed: %v", err),"ERROR"
 		}
-		ch, err = wac.sendProto(getAudioProto(m))
+		msgProto = getAudioProto(m)
+		msgInfo = getMessageInfo(msgProto)
+		ch, err = wac.sendProto(msgProto)
 	default:
-		return fmt.Errorf("cannot match type %T, use message types declared in the package", msg)
+		return fmt.Errorf("cannot match type %T, use message types declared in the package", msg),"ERROR"
 	}
 
 	if err != nil {
-		return fmt.Errorf("could not send proto: %v", err)
+		return fmt.Errorf("could not send proto: %v", err),"ERROR"
 	}
 
 	select {
 	case response := <-ch:
 		var resp map[string]interface{}
 		if err = json.Unmarshal([]byte(response), &resp); err != nil {
-			return fmt.Errorf("error decoding sending response: %v\n", err)
+			return fmt.Errorf("error decoding sending response: %v\n", err),"ERROR"
 		}
 		if int(resp["status"].(float64)) != 200 {
-			return fmt.Errorf("message sending responded with %d", resp["status"])
+			return fmt.Errorf("message sending responded with %d", resp["status"]),"ERROR"
+		}
+		if int(resp["status"].(float64)) == 200 {
+			return nil,msgInfo.Id
 		}
 	case <-time.After(wac.msgTimeout):
-		return fmt.Errorf("sending message timed out")
+		return fmt.Errorf("sending message timed out"),msgInfo.Id
 	}
 
-	return nil
+	return nil,"ERROR"
 }
 
 func (wac *Conn) sendProto(p *proto.WebMessageInfo) (<-chan string, error) {
