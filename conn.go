@@ -2,15 +2,23 @@
 package whatsapp
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/json"
+	"fmt"
 	"math/rand"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
-	"strconv"
+
+	"github.com/gleandroj/go-whatsapp/binary"
+	"github.com/gleandroj/go-whatsapp/crypto/cbc"
+
 	"github.com/gorilla/websocket"
-	"github.com/pkg/errors"
 )
 
 type metric byte
@@ -68,26 +76,47 @@ const (
 	skipOffline
 )
 
+// connection status. TODO: wac has isConnected method, consider integration
+type ConnectionStatus struct {
+	sync.RWMutex
+	connected bool
+}
+
+func (s *ConnectionStatus) Connected() bool {
+	s.RLock()
+	defer s.RUnlock()
+	return s.connected
+}
+
+func (s *ConnectionStatus) SetConnected(value bool) {
+	s.Lock()
+	s.connected = value
+	s.Unlock()
+}
+
+func newConnectionStatus(initialStatus bool) *ConnectionStatus {
+	return &ConnectionStatus{connected: initialStatus}
+}
+
 /*
 Conn is created by NewConn. Interacting with the initialized Conn is the main way of interacting with our package.
 It holds all necessary information to make the package work internally.
 */
 type Conn struct {
-	ws       *websocketWrapper
-	listener *listenerWrapper
-
-	connected bool
-	loggedIn  bool
-	wg        *sync.WaitGroup
-
-	session        *Session
-	sessionLock    uint32
-	handler        []Handler
-	msgCount       int
-	msgTimeout     time.Duration
-	Info           *Info
-	Store          *Store
-	ServerLastSeen time.Time
+	wsConn           *websocket.Conn
+	wsConnOK         bool
+	wsConnMutex      sync.RWMutex
+	session          *Session
+	listener         map[string]chan string
+	listenerMutex    sync.RWMutex
+	writeChan        chan wsMsg
+	handler          []Handler
+	msgCount         int
+	msgTimeout       time.Duration
+	Info             *Info
+	Store            *Store
+	ServerLastSeen   time.Time
+	connectionStatus *ConnectionStatus
 
 	timeTag string // last 3 digits obtained after a successful login takeover
 
@@ -101,15 +130,9 @@ type Conn struct {
 	writerLock sync.RWMutex
 }
 
-type websocketWrapper struct {
-	sync.Mutex
-	conn  *websocket.Conn
-	close chan struct{}
-}
-
-type listenerWrapper struct {
-	sync.RWMutex
-	m map[string]chan string
+type wsMsg struct {
+	messageType int
+	data        []byte
 }
 
 /*
@@ -172,21 +195,40 @@ func NewConnWithOptions(opt *Options) (*Conn, error) {
 	if len(opt.ClientVersion) != 0 {
 		wac.clientVersion = opt.ClientVersion
 	}
-	return wac, wac.connect()
+
+	if err := wac.connect(); err != nil {
+		return nil, err
+	}
+
+	wac.connectionStatus.SetConnected(true)
+
+	go wac.readPump()
+	go wac.writePump()
+	go wac.keepAlive(20000, 90000)
+
+	return wac, nil
+
 }
 
-// connect should be guarded with wsWriteMutex
-func (wac *Conn) connect() (err error) {
-	if wac.connected {
-		return ErrAlreadyConnected
+func (wac *Conn) isConnected() bool {
+	wac.wsConnMutex.RLock()
+	defer wac.wsConnMutex.RUnlock()
+	if wac.wsConn == nil {
+		return false
 	}
-	wac.connected = true
-	defer func() { // set connected to false on error
-		if err != nil {
-			wac.connected = false
-		}
-	}()
+	if wac.wsConnOK {
+		return true
+	}
 
+	// just send a keepalive to test the connection
+	wac.sendKeepAlive()
+
+	// this method is expected to be called by loops. So we can just return false
+	return false
+}
+
+// connect should be guarded with wsConnMutex
+func (wac *Conn) connect() error {
 	dialer := &websocket.Dialer{
 		ReadBufferSize:   0,
 		WriteBufferSize:  0,
@@ -195,58 +237,218 @@ func (wac *Conn) connect() (err error) {
 	}
 
 	headers := http.Header{"Origin": []string{"https://web.whatsapp.com"}}
+
 	server := strconv.Itoa(rand.Intn(8) + 1)
 	wsConn, _, err := dialer.Dial("wss://w"+server+".web.whatsapp.com/ws", headers)
+
 	if err != nil {
-		return errors.Wrap(err, "couldn't dial whatsapp web websocket")
+		return fmt.Errorf("couldn't dial whatsapp web websocket: %v", err)
 	}
 
 	wsConn.SetCloseHandler(func(code int, text string) error {
+		_, _ = fmt.Fprintf(os.Stderr, "websocket connection closed(%d, %s)\n", code, text)
+
 		// from default CloseHandler
 		message := websocket.FormatCloseMessage(code, "")
-		err := wsConn.WriteControl(websocket.CloseMessage, message, time.Now().Add(time.Second))
+		_ = wsConn.WriteControl(websocket.CloseMessage, message, time.Now().Add(time.Second))
 
 		// our close handling
-		_, _ = wac.Disconnect()
-		wac.handle(&ErrConnectionClosed{Code: code, Text: text})
-		return err
+		if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+			fmt.Println("Trigger reconnect")
+			go wac.reconnect()
+		} else {
+			wac.connectionStatus.SetConnected(false)
+		}
+		return nil
 	})
 
-	wac.ws = &websocketWrapper{
-		conn:  wsConn,
-		close: make(chan struct{}),
-	}
-
-	wac.listener = &listenerWrapper{
-		m: make(map[string]chan string),
-	}
-
-	wac.wg = &sync.WaitGroup{}
-	wac.wg.Add(2)
-	go wac.readPump()
-	go wac.keepAlive(5000, 20000)
-
-	wac.loggedIn = false
+	wac.wsConn = wsConn
+	wac.wsConnOK = true
 	return nil
 }
 
-func (wac *Conn) Disconnect() (Session, error) {
-	if !wac.connected {
-		return Session{}, ErrNotConnected
+// reconnect should be run as go routine
+func (wac *Conn) reconnect() {
+	wac.wsConnMutex.Lock()
+	_ = wac.wsConn.Close()
+	wac.wsConn = nil
+	wac.wsConnOK = false
+	wac.wsConnMutex.Unlock()
+
+	// wait up to 60 seconds and then reconnect. As writePump should send immediately, it might
+	// reconnect as well. So we check its existance before reconnecting
+	for !wac.isConnected() {
+		time.Sleep(time.Duration(rand.Intn(60)) * time.Second)
+
+		wac.wsConnMutex.Lock()
+		if wac.wsConn == nil {
+			if err := wac.connect(); err != nil {
+				_, _ = fmt.Fprintf(os.Stderr, "could not reconnect to websocket: %v\n", err)
+			}
+		}
+		wac.wsConnMutex.Unlock()
 	}
-	wac.connected = false
-	wac.loggedIn = false
+}
 
-	close(wac.ws.close) //signal close
-	wac.wg.Wait()       //wait for close
-
-	err := wac.ws.conn.Close()
-	wac.ws = nil
-
-	if wac.session == nil {
-		return Session{}, err
+func (wac *Conn) write(data []interface{}) (<-chan string, error) {
+	d, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
 	}
-	return *wac.session, err
+
+	ts := time.Now().Unix()
+	messageTag := fmt.Sprintf("%d.--%d", ts, wac.msgCount)
+	msg := fmt.Sprintf("%s,%s", messageTag, d)
+
+	ch := make(chan string, 1)
+
+	wac.listenerMutex.Lock()
+	wac.listener[messageTag] = ch
+	wac.listenerMutex.Unlock()
+
+	wac.writeChan <- wsMsg{websocket.TextMessage, []byte(msg)}
+
+	wac.msgCount++
+	return ch, nil
+}
+
+func (wac *Conn) writeBinary(node binary.Node, metric metric, flag flag, tag string) (<-chan string, error) {
+	if len(tag) < 2 {
+		return nil, fmt.Errorf("no tag specified or to short")
+	}
+	b, err := binary.Marshal(node)
+	if err != nil {
+		return nil, err
+	}
+
+	cipher, err := cbc.Encrypt(wac.session.EncKey, nil, b)
+	if err != nil {
+		return nil, err
+	}
+
+	h := hmac.New(sha256.New, wac.session.MacKey)
+	h.Write(cipher)
+	hash := h.Sum(nil)
+
+	data := []byte(tag + ",")
+	data = append(data, byte(metric), byte(flag))
+	data = append(data, hash[:32]...)
+	data = append(data, cipher...)
+
+	ch := make(chan string, 1)
+
+	wac.listenerMutex.Lock()
+	wac.listener[tag] = ch
+	wac.listenerMutex.Unlock()
+
+	msg := wsMsg{websocket.BinaryMessage, data}
+	wac.writeChan <- msg
+
+	wac.msgCount++
+	return ch, nil
+}
+
+func (wac *Conn) readPump() {
+	defer wac.wsConn.Close()
+
+	for {
+		if !wac.connectionStatus.Connected() {
+			break
+		}
+
+		msgType, msg, err := wac.wsConn.ReadMessage()
+		if err != nil {
+			wac.wsConnOK = false
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
+				wac.handle(fmt.Errorf("unexpected websocket close: %v", err))
+			} else {
+				wac.connectionStatus.SetConnected(false)
+				break
+			}
+			// sleep for a second and retry reading the next message
+			time.Sleep(time.Second)
+			continue
+		}
+		wac.wsConnOK = true
+
+		data := strings.SplitN(string(msg), ",", 2)
+
+		//Kepp-Alive Timestmap
+		if data[0][0] == '!' {
+			msecs, err := strconv.ParseInt(data[0][1:], 10, 64)
+			if err != nil {
+				_, _ = fmt.Fprintf(os.Stderr, "Error converting time string to uint: %v\n", err)
+				continue
+			}
+			wac.ServerLastSeen = time.Unix(msecs/1000, (msecs%1000)*int64(time.Millisecond))
+			continue
+		}
+
+		wac.listenerMutex.RLock()
+		listener, hasListener := wac.listener[data[0]]
+		wac.listenerMutex.RUnlock()
+
+		if hasListener && len(data[1]) > 0 {
+			listener <- data[1]
+
+			wac.listenerMutex.Lock()
+			delete(wac.listener, data[0])
+			wac.listenerMutex.Unlock()
+		} else if msgType == 2 && wac.session != nil && wac.session.EncKey != nil {
+			message, err := wac.decryptBinaryMessage([]byte(data[1]))
+			if err != nil {
+				wac.handle(fmt.Errorf("error decoding binary: %v", err))
+				continue
+			}
+
+			wac.dispatch(message)
+		} else {
+			if len(data[1]) > 0 {
+				wac.handle(string(data[1]))
+			}
+		}
+
+	}
+}
+
+func (wac *Conn) writePump() {
+	for msg := range wac.writeChan {
+		if !wac.connectionStatus.Connected() {
+			break
+		}
+
+		for !wac.isConnected() {
+			// reconnect to send the message ASAP
+			wac.wsConnMutex.Lock()
+			if wac.wsConn == nil {
+				if err := wac.connect(); err != nil {
+					_, _ = fmt.Fprintf(os.Stderr, "could not reconnect to websocket: %v\n", err)
+				}
+			}
+			wac.wsConnMutex.Unlock()
+			if !wac.isConnected() {
+				// reconnecting failed. Sleep for a while and try again afterwards
+				time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
+			}
+		}
+		if err := wac.wsConn.WriteMessage(msg.messageType, msg.data); err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "error writing to socket: %v\n", err)
+			wac.wsConnOK = false
+			// add message to channel again to no loose it
+			go func() {
+				wac.writeChan <- msg
+			}()
+		}
+	}
+}
+
+func (wac *Conn) sendKeepAlive() {
+	// whatever issues might be there allow sending this message
+	wac.wsConnOK = true
+	wac.writeChan <- wsMsg{
+		messageType: websocket.TextMessage,
+		data:        []byte("?,,"),
+	}
 }
 
 func (wac *Conn) AdminTest() (bool, error) {
@@ -263,20 +465,13 @@ func (wac *Conn) AdminTest() (bool, error) {
 }
 
 func (wac *Conn) keepAlive(minIntervalMs int, maxIntervalMs int) {
-	defer wac.wg.Done()
-
 	for {
-		err := wac.sendKeepAlive()
-		if err != nil {
-			wac.handle(errors.Wrap(err, "keepAlive failed"))
-			//TODO: Consequences?
+		if !wac.connectionStatus.Connected() {
+			break
 		}
+		wac.sendKeepAlive()
 		interval := rand.Intn(maxIntervalMs-minIntervalMs) + minIntervalMs
-		select {
-		case <-time.After(time.Duration(interval) * time.Millisecond):
-		case <-wac.ws.close:
-			return
-		}
+		<-time.After(time.Duration(interval) * time.Millisecond)
 	}
 }
 

@@ -232,7 +232,7 @@ func (wac *Conn) Login(qrChan chan<- string) (Session, error) {
 
 	//listener for Login response
 	messageTag := "s1"
-	wac.listener.m[messageTag] = make(chan string, 1)
+	wac.listener[messageTag] = make(chan string, 1)
 
 	qrChan <- fmt.Sprintf("%v,%v,%v", ref, base64.StdEncoding.EncodeToString(pub[:]), session.ClientId)
 
@@ -317,7 +317,7 @@ func (wac *Conn) RestoreSession(session Session) (Session, error) {
 	wac.session = &session
 
 	//listener for Conn or challenge; s1 is not allowed to drop
-	wac.listener.m["s1"] = make(chan string, 1)
+	wac.listener["s1"] = make(chan string, 1)
 
 	//admin init
 	init := []interface{}{"admin", "init", waVersion, []string{wac.longClientName, wac.shortClientName, wac.clientVersion}, wac.session.ClientId, true}
@@ -329,7 +329,7 @@ func (wac *Conn) RestoreSession(session Session) (Session, error) {
 
 	//admin login with takeover
 	login := []interface{}{"admin", "login", session.ClientToken, session.ServerToken, session.ClientId, "takeover"}
-	loginChan, err := wac.writeJson(login)
+	loginChan, err := wac.write(login)
 	if err != nil {
 		wac.session = nil
 		return Session{}, fmt.Errorf("error writing admin login: %v\n", err)
@@ -355,7 +355,7 @@ func (wac *Conn) RestoreSession(session Session) (Session, error) {
 	//wait for s1
 	var connResp []interface{}
 	select {
-	case r1 := <-wac.listener.m["s1"]:
+	case r1 := <-wac.listener["s1"]:
 		if err := json.Unmarshal([]byte(r1), &connResp); err != nil {
 			wac.timeTag = ""
 			return fmt.Errorf("error decoding s1 message: %v\n", err)
@@ -380,7 +380,7 @@ func (wac *Conn) RestoreSession(session Session) (Session, error) {
 
 	//check if challenge is present
 	if len(connResp) == 2 && connResp[0] == "Cmd" && connResp[1].(map[string]interface{})["type"] == "challenge" {
-		wac.listener.m["s2"] = make(chan string, 1)
+		wac.listener["s2"] = make(chan string, 1)
 
 		if err := wac.resolveChallenge(connResp[1].(map[string]interface{})["challenge"].(string)); err != nil {
 			wac.timeTag = ""
@@ -388,7 +388,7 @@ func (wac *Conn) RestoreSession(session Session) (Session, error) {
 		}
 
 		select {
-		case r := <-wac.listener.m["s2"]:
+		case r := <-wac.listener["s2"]:
 			if err := json.Unmarshal([]byte(r), &connResp); err != nil {
 				wac.timeTag = ""
 				return fmt.Errorf("error decoding s2 message: %v\n", err)
@@ -439,7 +439,7 @@ func (wac *Conn) resolveChallenge(challenge string) error {
 	h2.Write([]byte(decoded))
 
 	ch := []interface{}{"admin", "challenge", base64.StdEncoding.EncodeToString(h2.Sum(nil)), wac.session.ServerToken, wac.session.ClientId}
-	challengeChan, err := wac.writeJson(ch)
+	challengeChan, err := wac.write(ch)
 	if err != nil {
 		return fmt.Errorf("error writing challenge: %v\n", err)
 	}
@@ -466,7 +466,7 @@ The session can not be resumed and will disappear on your phone in the WhatsAppW
 */
 func (wac *Conn) Logout() error {
 	login := []interface{}{"admin", "Conn", "disconnect"}
-	_, err := wac.writeJson(login)
+	_, err := wac.write(login)
 	if err != nil {
 		return fmt.Errorf("error writing logout: %v\n", err)
 	}
