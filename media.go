@@ -77,7 +77,7 @@ func downloadMedia(url string) (file []byte, mac []byte, err error) {
 		return nil, nil, fmt.Errorf("download failed with status code %d", resp.StatusCode)
 	}
 	if resp.ContentLength <= 10 {
-		return nil, nil, fmt.Errorf("file to short")
+		return nil, nil, fmt.Errorf("file too short")
 	}
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {

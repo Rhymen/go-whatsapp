@@ -35,28 +35,28 @@ func (wac *Conn) Send(msg interface{}) (string, error) {
 		var err error
 		m.url, m.mediaKey, m.fileEncSha256, m.fileSha256, m.fileLength, err = wac.Upload(m.Content, MediaImage)
 		if err != nil {
-			return "ERROR", fmt.Errorf("image upload failed: %v", err)
+			return fmt.Errorf("image upload failed: %v", err)
 		}
 		msgProto = getImageProto(m)
 	case VideoMessage:
 		var err error
 		m.url, m.mediaKey, m.fileEncSha256, m.fileSha256, m.fileLength, err = wac.Upload(m.Content, MediaVideo)
 		if err != nil {
-			return "ERROR", fmt.Errorf("video upload failed: %v", err)
+			return fmt.Errorf("video upload failed: %v", err)
 		}
 		msgProto = getVideoProto(m)
 	case DocumentMessage:
 		var err error
 		m.url, m.mediaKey, m.fileEncSha256, m.fileSha256, m.fileLength, err = wac.Upload(m.Content, MediaDocument)
 		if err != nil {
-			return "ERROR", fmt.Errorf("document upload failed: %v", err)
+			return fmt.Errorf("document upload failed: %v", err)
 		}
 		msgProto = getDocumentProto(m)
 	case AudioMessage:
 		var err error
 		m.url, m.mediaKey, m.fileEncSha256, m.fileSha256, m.fileLength, err = wac.Upload(m.Content, MediaAudio)
 		if err != nil {
-			return "ERROR", fmt.Errorf("audio upload failed: %v", err)
+			return fmt.Errorf("audio upload failed: %v", err)
 		}
 		msgProto = getAudioProto(m)
 	case LocationMessage:
@@ -70,20 +70,20 @@ func (wac *Conn) Send(msg interface{}) (string, error) {
 	case OrderMessage:
 		msgProto = getOrderMessageProto(m)
 	default:
-		return "ERROR", fmt.Errorf("cannot match type %T, use message types declared in the package", msg)
+		return fmt.Errorf("cannot match type %T, use message types declared in the package", msg)
 	}
 	status := proto.WebMessageInfo_PENDING
 	msgProto.Status = &status
 	ch, err := wac.sendProto(msgProto)
 	if err != nil {
-		return "ERROR", fmt.Errorf("could not send proto: %v", err)
+		return fmt.Errorf("could not send proto: %v", err)
 	}
 
 	select {
 	case response := <-ch:
 		var resp map[string]interface{}
 		if err = json.Unmarshal([]byte(response), &resp); err != nil {
-			return "ERROR", fmt.Errorf("error decoding sending response: %v\n", err)
+			return fmt.Errorf("error decoding sending response: %v\n", err)
 		}
 		if int(resp["status"].(float64)) != 200 {
 			return "ERROR", fmt.Errorf("message sending responded with %v", resp["status"])
@@ -92,10 +92,10 @@ func (wac *Conn) Send(msg interface{}) (string, error) {
 			return getMessageInfo(msgProto).Id, nil
 		}
 	case <-time.After(wac.msgTimeout):
-		return "ERROR", fmt.Errorf("sending message timed out")
+		return fmt.Errorf("sending message timed out")
 	}
 
-	return "ERROR", nil
+	return nil
 }
 
 func (wac *Conn) sendProto(p *proto.WebMessageInfo) (<-chan string, error) {
@@ -417,7 +417,7 @@ func getImageProto(msg ImageMessage) *proto.WebMessageInfo {
 Download is the function to retrieve media data. The media gets downloaded, validated and returned.
 */
 func (m *ImageMessage) Download() ([]byte, error) {
-	return Download(m.url, m.mediaKey, MediaImage, int(m.fileLength))
+	return Download(m.url, m.mediaKey, MediaImage, int(m.FileLength))
 }
 
 /*
@@ -474,8 +474,8 @@ func getVideoProto(msg VideoMessage) *proto.WebMessageInfo {
 			MediaKey:      msg.mediaKey,
 			Seconds:       &msg.Length,
 			FileEncSha256: msg.fileEncSha256,
-			FileSha256:    msg.fileSha256,
-			FileLength:    &msg.fileLength,
+			FileSha256:    msg.FileSha256,
+			FileLength:    &msg.FileLength,
 			Mimetype:      &msg.Type,
 			ContextInfo:   contextInfo,
 		},
@@ -487,7 +487,7 @@ func getVideoProto(msg VideoMessage) *proto.WebMessageInfo {
 Download is the function to retrieve media data. The media gets downloaded, validated and returned.
 */
 func (m *VideoMessage) Download() ([]byte, error) {
-	return Download(m.url, m.mediaKey, MediaVideo, int(m.fileLength))
+	return Download(m.url, m.mediaKey, MediaVideo, int(m.FileLength))
 }
 
 /*
@@ -535,8 +535,8 @@ func getAudioProto(msg AudioMessage) *proto.WebMessageInfo {
 			MediaKey:      msg.mediaKey,
 			Seconds:       &msg.Length,
 			FileEncSha256: msg.fileEncSha256,
-			FileSha256:    msg.fileSha256,
-			FileLength:    &msg.fileLength,
+			FileSha256:    msg.FileSha256,
+			FileLength:    &msg.FileLength,
 			Mimetype:      &msg.Type,
 			ContextInfo:   contextInfo,
 			Ptt:           &msg.Ptt,
@@ -549,7 +549,7 @@ func getAudioProto(msg AudioMessage) *proto.WebMessageInfo {
 Download is the function to retrieve media data. The media gets downloaded, validated and returned.
 */
 func (m *AudioMessage) Download() ([]byte, error) {
-	return Download(m.url, m.mediaKey, MediaAudio, int(m.fileLength))
+	return Download(m.url, m.mediaKey, MediaAudio, int(m.FileLength))
 }
 
 /*
@@ -561,7 +561,6 @@ type DocumentMessage struct {
 	Title         string
 	PageCount     uint32
 	Type          string
-	FileName      string
 	Thumbnail     []byte
 	Content       io.Reader
 	url           string
@@ -577,10 +576,6 @@ func getDocumentMessage(msg *proto.WebMessageInfo) DocumentMessage {
 
 	documentMessage := DocumentMessage{
 		Info:          getMessageInfo(msg),
-		Title:         doc.GetTitle(),
-		PageCount:     doc.GetPageCount(),
-		Type:          doc.GetMimetype(),
-		FileName:      doc.GetFileName(),
 		Thumbnail:     doc.GetJpegThumbnail(),
 		url:           doc.GetUrl(),
 		mediaKey:      doc.GetMediaKey(),
@@ -602,8 +597,8 @@ func getDocumentProto(msg DocumentMessage) *proto.WebMessageInfo {
 			Url:           &msg.url,
 			MediaKey:      msg.mediaKey,
 			FileEncSha256: msg.fileEncSha256,
-			FileSha256:    msg.fileSha256,
-			FileLength:    &msg.fileLength,
+			FileSha256:    msg.FileSha256,
+			FileLength:    &msg.FileLength,
 			PageCount:     &msg.PageCount,
 			Title:         &msg.Title,
 			Mimetype:      &msg.Type,
@@ -617,7 +612,89 @@ func getDocumentProto(msg DocumentMessage) *proto.WebMessageInfo {
 Download is the function to retrieve media data. The media gets downloaded, validated and returned.
 */
 func (m *DocumentMessage) Download() ([]byte, error) {
-	return Download(m.url, m.mediaKey, MediaDocument, int(m.fileLength))
+	return Download(m.url, m.mediaKey, MediaDocument, int(m.FileLength))
+}
+
+type LocationMessage struct {
+	Info             MessageInfo
+	DegreesLatitude  float64
+	DegreesLongitude float64
+	Name             string
+	Address          string
+	Url              string
+	JpegThumbnail    []byte
+}
+
+func GetLocationMessage(msg *proto.WebMessageInfo) LocationMessage {
+	loc := msg.GetMessage().GetLocationMessage()
+	return LocationMessage{
+		Info:             getMessageInfo(msg),
+		DegreesLatitude:  loc.GetDegreesLatitude(),
+		DegreesLongitude: loc.GetDegreesLongitude(),
+		Name:             loc.GetName(),
+		Address:          loc.GetAddress(),
+		Url:              loc.GetUrl(),
+		JpegThumbnail:    loc.GetJpegThumbnail(),
+	}
+}
+
+func GetLocationProto(msg LocationMessage) *proto.WebMessageInfo {
+	p := getInfoProto(&msg.Info)
+	p.Message = &proto.Message{
+		LocationMessage: &proto.LocationMessage{
+			DegreesLatitude:  &msg.DegreesLatitude,
+			DegreesLongitude: &msg.DegreesLongitude,
+			Name:             &msg.Name,
+			Address:          &msg.Address,
+			Url:              &msg.Url,
+			JpegThumbnail:    msg.JpegThumbnail,
+		},
+	}
+	return p
+}
+
+type LiveLocationMessage struct {
+	Info                              MessageInfo
+	DegreesLatitude                   float64
+	DegreesLongitude                  float64
+	AccuracyInMeters                  uint32
+	SpeedInMps                        float32
+	DegreesClockwiseFromMagneticNorth uint32
+	Caption                           string
+	SequenceNumber                    int64
+	JpegThumbnail                     []byte
+}
+
+func GetLiveLocationMessage(msg *proto.WebMessageInfo) LiveLocationMessage {
+	loc := msg.GetMessage().GetLiveLocationMessage()
+	return LiveLocationMessage{
+		Info:                              getMessageInfo(msg),
+		DegreesLatitude:                   loc.GetDegreesLatitude(),
+		DegreesLongitude:                  loc.GetDegreesLongitude(),
+		AccuracyInMeters:                  loc.GetAccuracyInMeters(),
+		SpeedInMps:                        loc.GetSpeedInMps(),
+		DegreesClockwiseFromMagneticNorth: loc.GetDegreesClockwiseFromMagneticNorth(),
+		Caption:                           loc.GetCaption(),
+		SequenceNumber:                    loc.GetSequenceNumber(),
+		JpegThumbnail:                     loc.GetJpegThumbnail(),
+	}
+}
+
+func GetLiveLocationProto(msg LiveLocationMessage) *proto.WebMessageInfo {
+	p := getInfoProto(&msg.Info)
+	p.Message = &proto.Message{
+		LiveLocationMessage: &proto.LiveLocationMessage{
+			DegreesLatitude:                   &msg.DegreesLatitude,
+			DegreesLongitude:                  &msg.DegreesLongitude,
+			AccuracyInMeters:                  &msg.AccuracyInMeters,
+			SpeedInMps:                        &msg.SpeedInMps,
+			DegreesClockwiseFromMagneticNorth: &msg.DegreesClockwiseFromMagneticNorth,
+			Caption:                           &msg.Caption,
+			SequenceNumber:                    &msg.SequenceNumber,
+			JpegThumbnail:                     msg.JpegThumbnail,
+		},
+	}
+	return p
 }
 
 /*
