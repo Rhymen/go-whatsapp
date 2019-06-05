@@ -7,14 +7,14 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
-	"github.com/gleandroj/go-whatsapp/crypto/cbc"
-	"github.com/gleandroj/go-whatsapp/crypto/curve25519"
-	"github.com/gleandroj/go-whatsapp/crypto/hkdf"
+	"github.com/kaxap/go-whatsapp/crypto/cbc"
+	"github.com/kaxap/go-whatsapp/crypto/curve25519"
+	"github.com/kaxap/go-whatsapp/crypto/hkdf"
 )
 
 //represents the WhatsAppWeb client version
@@ -22,7 +22,7 @@ var waVersion = []int{2, 2142, 12}
 
 /*
 Session contains session individual information. To be able to resume the connection without scanning the qr code
-every time you should save the Session returned by Login and use RestoreWithSession the next time you want to login.
+every time you should save the Session returned by Login and use RestoreSession the next time you want to login.
 Every successful created connection returns a new Session. The Session(ClientToken, ServerToken) is altered after
 every re-login and should be saved every time.
 */
@@ -164,7 +164,7 @@ func (wac *Conn) GetClientVersion() []int {
 
 /*
 Login is the function that creates a new whatsapp session and logs you in. If you do not want to scan the qr code
-every time, you should save the returned session and use RestoreWithSession the next time. Login takes a writable channel
+every time, you should save the returned session and use RestoreSession the next time. Login takes a writable channel
 as an parameter. This channel is used to push the data represented by the qr code back to the user. The received data
 should be displayed as an qr code in a way you prefer. To print a qr code to console you can use:
 github.com/Baozisoftware/qrcode-terminal-go Example login procedure:
@@ -187,21 +187,7 @@ github.com/Baozisoftware/qrcode-terminal-go Example login procedure:
 */
 func (wac *Conn) Login(qrChan chan<- string) (Session, error) {
 	session := Session{}
-	//Makes sure that only a single Login or Restore can happen at the same time
-	if !atomic.CompareAndSwapUint32(&wac.sessionLock, 0, 1) {
-		return session, ErrLoginInProgress
-	}
-	defer atomic.StoreUint32(&wac.sessionLock, 0)
 
-	if wac.loggedIn {
-		return session, ErrAlreadyLoggedIn
-	}
-
-	if err := wac.connect(); err != nil && err != ErrAlreadyConnected {
-		return session, err
-	}
-
-	//logged in?!?
 	if wac.session != nil && (wac.session.EncKey != nil || wac.session.MacKey != nil) {
 		return session, fmt.Errorf("already logged in")
 	}
@@ -227,6 +213,7 @@ func (wac *Conn) Login(qrChan chan<- string) (Session, error) {
 	}
 
 	var resp map[string]interface{}
+	log.Print(string(r))
 	if err = json.Unmarshal([]byte(r), &resp); err != nil {
 		return session, fmt.Errorf("error decoding login resp: %v\n", err)
 	}
@@ -244,10 +231,8 @@ func (wac *Conn) Login(qrChan chan<- string) (Session, error) {
 	}
 
 	//listener for Login response
-	s1 := make(chan string, 1)
-	wac.listener.Lock()
-	wac.listener.m["s1"] = s1
-	wac.listener.Unlock()
+	messageTag := "s1"
+	wac.listener[messageTag] = make(chan string, 1)
 
 	qrChan <- fmt.Sprintf("%v,%v,%v", ref, base64.StdEncoding.EncodeToString(pub[:]), session.ClientId)
 
@@ -314,84 +299,48 @@ func (wac *Conn) Login(qrChan chan<- string) (Session, error) {
 	session.EncKey = keyDecrypted[:32]
 	session.MacKey = keyDecrypted[32:64]
 	wac.session = &session
-	wac.loggedIn = true
 
 	return session, nil
 }
 
-//TODO: GoDoc
 /*
-Basically the old RestoreSession functionality
-*/
-func (wac *Conn) RestoreWithSession(session Session) (_ Session, err error) {
-	if wac.loggedIn {
-		return Session{}, ErrAlreadyLoggedIn
-	}
-	old := wac.session
-	defer func() {
-		if err != nil {
-			wac.session = old
-		}
-	}()
-	wac.session = &session
-
-	if err = wac.Restore(); err != nil {
-		wac.session = nil
-		return Session{}, err
-	}
-	return *wac.session, nil
-}
-
-/*//TODO: GoDoc
-RestoreWithSession is the function that restores a given session. It will try to reestablish the connection to the
+RestoreSession is the function that restores a given session. It will try to reestablish the connection to the
 WhatsAppWeb servers with the provided session. If it succeeds it will return a new session. This new session has to be
 saved because the Client and Server-Token will change after every login. Logging in with old tokens is possible, but not
 suggested. If so, a challenge has to be resolved which is just another possible point of failure.
 */
-func (wac *Conn) Restore() error {
-	//Makes sure that only a single Login or Restore can happen at the same time
-	if !atomic.CompareAndSwapUint32(&wac.sessionLock, 0, 1) {
-		return ErrLoginInProgress
-	}
-	defer atomic.StoreUint32(&wac.sessionLock, 0)
-
-	if wac.session == nil {
-		return ErrInvalidSession
+func (wac *Conn) RestoreSession(session Session) (Session, error) {
+	if wac.session != nil && (wac.session.EncKey != nil || wac.session.MacKey != nil) {
+		return Session{}, fmt.Errorf("already logged in")
 	}
 
-	if err := wac.connect(); err != nil && err != ErrAlreadyConnected {
-		return err
-	}
-
-	if wac.loggedIn {
-		return ErrAlreadyLoggedIn
-	}
+	wac.session = &session
 
 	//listener for Conn or challenge; s1 is not allowed to drop
-	s1 := make(chan string, 1)
-	wac.listener.Lock()
-	wac.listener.m["s1"] = s1
-	wac.listener.Unlock()
+	wac.listener["s1"] = make(chan string, 1)
 
 	//admin init
 	init := []interface{}{"admin", "init", waVersion, []string{wac.longClientName, wac.shortClientName, wac.clientVersion}, wac.session.ClientId, true}
 	initChan, err := wac.writeJson(init)
 	if err != nil {
-		return fmt.Errorf("error writing admin init: %v\n", err)
+		wac.session = nil
+		return Session{}, fmt.Errorf("error writing admin init: %v\n", err)
 	}
 
 	//admin login with takeover
-	login := []interface{}{"admin", "login", wac.session.ClientToken, wac.session.ServerToken, wac.session.ClientId, "takeover"}
-	loginChan, err := wac.writeJson(login)
+	login := []interface{}{"admin", "login", session.ClientToken, session.ServerToken, session.ClientId, "takeover"}
+	loginChan, err := wac.write(login)
 	if err != nil {
-		return fmt.Errorf("error writing admin login: %v\n", err)
+		wac.session = nil
+		return Session{}, fmt.Errorf("error writing admin login: %v\n", err)
 	}
 
 	select {
 	case r := <-initChan:
 		var resp map[string]interface{}
 		if err = json.Unmarshal([]byte(r), &resp); err != nil {
-			return fmt.Errorf("error decoding login connResp: %v\n", err)
+			wac.session = nil
+			return Session{}, fmt.Errorf("error decoding login connResp: %v\n", err)
 		}
 
 		if int(resp["status"].(float64)) != 200 {
@@ -406,7 +355,7 @@ func (wac *Conn) Restore() error {
 	//wait for s1
 	var connResp []interface{}
 	select {
-	case r1 := <-s1:
+	case r1 := <-wac.listener["s1"]:
 		if err := json.Unmarshal([]byte(r1), &connResp); err != nil {
 			wac.timeTag = ""
 			return fmt.Errorf("error decoding s1 message: %v\n", err)
@@ -431,10 +380,7 @@ func (wac *Conn) Restore() error {
 
 	//check if challenge is present
 	if len(connResp) == 2 && connResp[0] == "Cmd" && connResp[1].(map[string]interface{})["type"] == "challenge" {
-		s2 := make(chan string, 1)
-		wac.listener.Lock()
-		wac.listener.m["s2"] = s2
-		wac.listener.Unlock()
+		wac.listener["s2"] = make(chan string, 1)
 
 		if err := wac.resolveChallenge(connResp[1].(map[string]interface{})["challenge"].(string)); err != nil {
 			wac.timeTag = ""
@@ -442,7 +388,7 @@ func (wac *Conn) Restore() error {
 		}
 
 		select {
-		case r := <-s2:
+		case r := <-wac.listener["s2"]:
 			if err := json.Unmarshal([]byte(r), &connResp); err != nil {
 				wac.timeTag = ""
 				return fmt.Errorf("error decoding s2 message: %v\n", err)
@@ -476,12 +422,11 @@ func (wac *Conn) Restore() error {
 	wac.Info = newInfoFromReq(info)
 
 	//set new tokens
-	wac.session.ClientToken = info["clientToken"].(string)
-	wac.session.ServerToken = info["serverToken"].(string)
-	wac.session.Wid = info["wid"].(string)
-	wac.loggedIn = true
+	session.ClientToken = info["clientToken"].(string)
+	session.ServerToken = info["serverToken"].(string)
+	session.Wid = info["wid"].(string)
 
-	return nil
+	return *wac.session, nil
 }
 
 func (wac *Conn) resolveChallenge(challenge string) error {
@@ -494,7 +439,7 @@ func (wac *Conn) resolveChallenge(challenge string) error {
 	h2.Write([]byte(decoded))
 
 	ch := []interface{}{"admin", "challenge", base64.StdEncoding.EncodeToString(h2.Sum(nil)), wac.session.ServerToken, wac.session.ClientId}
-	challengeChan, err := wac.writeJson(ch)
+	challengeChan, err := wac.write(ch)
 	if err != nil {
 		return fmt.Errorf("error writing challenge: %v\n", err)
 	}
@@ -521,7 +466,7 @@ The session can not be resumed and will disappear on your phone in the WhatsAppW
 */
 func (wac *Conn) Logout() error {
 	login := []interface{}{"admin", "Conn", "disconnect"}
-	_, err := wac.writeJson(login)
+	_, err := wac.write(login)
 	if err != nil {
 		return fmt.Errorf("error writing logout: %v\n", err)
 	}
