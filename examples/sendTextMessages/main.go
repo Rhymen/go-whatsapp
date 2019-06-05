@@ -14,7 +14,7 @@ import (
 
 func main() {
 	//create new WhatsApp connection
-	wac, err := whatsapp.NewConn(5 * time.Second)
+	wac, err := whatsapp.NewConn(5 * time.Second, "gleandroj/go-whatsapp", "go-whatsapp")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error creating connection: %v\n", err)
 		return

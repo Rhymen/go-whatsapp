@@ -69,7 +69,7 @@ func (h *waHandler) HandleImageMessage(message whatsapp.ImageMessage) {
 
 func main() {
 	//create new WhatsApp connection
-	wac, err := whatsapp.NewConn(5 * time.Second)
+	wac, err := whatsapp.NewConn(5 * time.Second, "gleandroj/go-whatsapp", "go-whatsapp")
 	if err != nil {
 		log.Fatalf("error creating connection: %v\n", err)
 	}

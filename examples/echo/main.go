@@ -103,7 +103,7 @@ func writeSession(session whatsapp.Session) error {
 }
 
 func main() {
-	wac, err := whatsapp.NewConn(5 * time.Second)
+	wac, err := whatsapp.NewConn(5 * time.Second, "gleandroj/go-whatsapp", "go-whatsapp")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error creating connection: %v\n", err)
 		return
