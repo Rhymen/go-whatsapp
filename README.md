@@ -1,5 +1,5 @@
 # go-whatsapp
-Package rhymen/go-whatsapp implements the WhatsApp Web API to provide a clean interface for developers. Big thanks to all contributors of the [sigalor/whatsapp-web-reveng](https://github.com/sigalor/whatsapp-web-reveng) project. The official WhatsApp Business API was released in August 2018. You can check it out [here](https://www.whatsapp.com/business/api).
+Package gleandroj/go-whatsapp implements the WhatsApp Web API to provide a clean interface for developers. Big thanks to all contributors of the [sigalor/whatsapp-web-reveng](https://github.com/sigalor/whatsapp-web-reveng) project. The official WhatsApp Business API was released in August 2018. You can check it out [here](https://www.whatsapp.com/business/api).
 
 ## Warning
 
@@ -7,14 +7,14 @@ This package is not being actively maintained currently and will soon be unusuab
 
 ## Installation
 ```sh
-go get github.com/Rhymen/go-whatsapp
+go get github.com/gleandroj/go-whatsapp
 ```
 
 ## Usage
 ### Creating a connection
 ```go
 import (
-    whatsapp "github.com/Rhymen/go-whatsapp"
+    whatsapp "github.com/gleandroj/go-whatsapp"
 )
 
 wac, err := whatsapp.NewConn(20 * time.Second)
