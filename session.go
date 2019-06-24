@@ -213,7 +213,7 @@ func (wac *Conn) Login(qrChan chan<- string) (Session, error) {
 	}
 
 	var resp map[string]interface{}
-	log.Print(string(r))
+
 	if err = json.Unmarshal([]byte(r), &resp); err != nil {
 		return session, fmt.Errorf("error decoding login resp: %v\n", err)
 	}
