@@ -186,6 +186,7 @@ func (wac *Conn) Disconnect() (Session, error) {
 
 	err := wac.ws.conn.Close()
 	wac.ws = nil
+	wac.Info.Connected = false
 
 	if wac.session == nil {
 		return Session{}, err
@@ -212,8 +213,11 @@ func (wac *Conn) keepAlive(minIntervalMs int, maxIntervalMs int) {
 	for {
 		err := wac.sendKeepAlive()
 		if err != nil {
+			wac.Info.Connected = false
 			wac.handle(errors.Wrap(err, "keepAlive failed"))
 			//TODO: Consequences?
+		} else {
+			wac.Info.Connected = true
 		}
 		interval := rand.Intn(maxIntervalMs-minIntervalMs) + minIntervalMs
 		select {
