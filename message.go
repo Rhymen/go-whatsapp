@@ -703,6 +703,43 @@ func getContactMessageProto(msg ContactMessage) *proto.WebMessageInfo {
 	return p
 }
 
+/*
+ContactsArrayMessage represents an array of contacts
+*/
+
+type ContactsArrayMessage struct {
+	Info MessageInfo
+
+	DisplayName string
+	Contacts    []*ContactMessage
+
+	ContextInfo ContextInfo
+}
+
+func getContactsArrayMessage(msg *proto.WebMessageInfo) ContactsArrayMessage {
+	contactsArray := msg.GetMessage().GetContactsArrayMessage()
+
+	var contacts []*ContactMessage
+	for _, contact := range contactsArray.GetContacts() {
+		contacts = append(contacts, &ContactMessage{
+			DisplayName: contact.GetDisplayName(),
+			Vcard:       contact.GetVcard(),
+			ContextInfo: getMessageContext(contact.GetContextInfo()),
+		})
+	}
+
+	contactsArrayMessage := ContactsArrayMessage{
+		Info: getMessageInfo(msg),
+
+		DisplayName: contactsArray.GetDisplayName(),
+		Contacts:    contacts,
+
+		ContextInfo: getMessageContext(contactsArray.GetContextInfo()),
+	}
+
+	return contactsArrayMessage
+}
+
 func ParseProtoMessage(msg *proto.WebMessageInfo) interface{} {
 
 	switch {
@@ -736,6 +773,9 @@ func ParseProtoMessage(msg *proto.WebMessageInfo) interface{} {
 
 	case msg.GetMessage().GetContactMessage() != nil:
 		return getContactMessage(msg)
+
+	case msg.GetMessage().GetContactsArrayMessage() != nil:
+		return getContactsArrayMessage(msg)
 
 	default:
 		//cannot match message
