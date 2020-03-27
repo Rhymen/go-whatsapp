@@ -39,7 +39,7 @@ func (wac *Conn) Search(search string, count, page int) (*binary.Node, error) {
 	return wac.query("search", "", "", "", "", search, count, page)
 }
 
-func (wac *Conn) LoadMessages(jid, messageId string, count int) (*binary.Node, error) {
+func (wac *Conn) LoadMessages(jid, count int) (*binary.Node, error) {
 	return wac.query("message", jid, "", "before", "true", "", count, 0)
 }
 
