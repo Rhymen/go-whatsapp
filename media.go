@@ -145,6 +145,14 @@ var mediaTypeMap = map[MediaType]string{
 	MediaAudio:    "/mms/audio",
 }
 
+// Upload only when media is nill
+func (wac *Conn) uploadMedia(m *Media, reader io.Reader, appInfo MediaType) (downloadURL string, mediaKey []byte, fileEncSha256 []byte, fileSha256 []byte, fileLength uint64, err error) {
+	if m == nil {
+		return wac.Upload(reader, appInfo)
+	}
+	return m.downloadURL, m.mediaKey, m.fileEncSha256, m.fileSha256, m.fileLength, nil
+}
+
 func (wac *Conn) Upload(reader io.Reader, appInfo MediaType) (downloadURL string, mediaKey []byte, fileEncSha256 []byte, fileSha256 []byte, fileLength uint64, err error) {
 	data, err := ioutil.ReadAll(reader)
 	if err != nil {
