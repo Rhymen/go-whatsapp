@@ -18,6 +18,15 @@ import (
 	"github.com/Rhymen/go-whatsapp/crypto/hkdf"
 )
 
+//
+type Media struct {
+	downloadURL   string
+	mediaKey      []byte
+	fileEncSha256 []byte
+	fileSha256    []byte
+	fileLength    uint64
+}
+
 func Download(url string, mediaKey []byte, appInfo MediaType, fileLength int) ([]byte, error) {
 	if url == "" {
 		return nil, fmt.Errorf("no url present")
@@ -130,10 +139,10 @@ func (wac *Conn) queryMediaConn() (hostname, auth string, ttl int, err error) {
 }
 
 var mediaTypeMap = map[MediaType]string{
-	MediaImage: "/mms/image",
-	MediaVideo: "/mms/video",
+	MediaImage:    "/mms/image",
+	MediaVideo:    "/mms/video",
 	MediaDocument: "/mms/document",
-	MediaAudio: "/mms/audio",
+	MediaAudio:    "/mms/audio",
 }
 
 func (wac *Conn) Upload(reader io.Reader, appInfo MediaType) (downloadURL string, mediaKey []byte, fileEncSha256 []byte, fileSha256 []byte, fileLength uint64, err error) {
