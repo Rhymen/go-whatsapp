@@ -20,11 +20,11 @@ import (
 
 //
 type Media struct {
-	downloadURL   string
-	mediaKey      []byte
-	fileEncSha256 []byte
-	fileSha256    []byte
-	fileLength    uint64
+	DownloadURL   string
+	MediaKey      []byte
+	FileEncSha256 []byte
+	FileSha256    []byte
+	FileLength    uint64
 }
 
 func Download(url string, mediaKey []byte, appInfo MediaType, fileLength int) ([]byte, error) {
@@ -150,7 +150,7 @@ func (wac *Conn) uploadMedia(m *Media, reader io.Reader, appInfo MediaType) (dow
 	if m == nil {
 		return wac.Upload(reader, appInfo)
 	}
-	return m.downloadURL, m.mediaKey, m.fileEncSha256, m.fileSha256, m.fileLength, nil
+	return m.DownloadURL, m.MediaKey, m.FileEncSha256, m.FileSha256, m.FileLength, nil
 }
 
 func (wac *Conn) Upload(reader io.Reader, appInfo MediaType) (downloadURL string, mediaKey []byte, fileEncSha256 []byte, fileSha256 []byte, fileLength uint64, err error) {
