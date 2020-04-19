@@ -23,8 +23,14 @@ const (
 	MediaDocument MediaType = "WhatsApp Document Keys"
 )
 
-func (wac *Conn) Send(msg interface{}) (string, error) {
+// Since there is no optional variable in go, using this as a workaround
+func (wac *Conn) Send(msg interface{}, medias ...Media) (string, error) {
 	var msgProto *proto.WebMessageInfo
+	var media *Media
+
+	if len(medias) > 0 {
+		media = &medias[0]
+	}
 
 	switch m := msg.(type) {
 	case *proto.WebMessageInfo:
@@ -33,28 +39,28 @@ func (wac *Conn) Send(msg interface{}) (string, error) {
 		msgProto = getTextProto(m)
 	case ImageMessage:
 		var err error
-		m.url, m.mediaKey, m.fileEncSha256, m.fileSha256, m.fileLength, err = wac.Upload(m.Content, MediaImage)
+		m.url, m.mediaKey, m.fileEncSha256, m.fileSha256, m.fileLength, err = wac.uploadMedia(media, m.Content, MediaImage)
 		if err != nil {
 			return "ERROR", fmt.Errorf("image upload failed: %v", err)
 		}
 		msgProto = getImageProto(m)
 	case VideoMessage:
 		var err error
-		m.url, m.mediaKey, m.fileEncSha256, m.fileSha256, m.fileLength, err = wac.Upload(m.Content, MediaVideo)
+		m.url, m.mediaKey, m.fileEncSha256, m.fileSha256, m.fileLength, err = wac.uploadMedia(media, m.Content, MediaVideo)
 		if err != nil {
 			return "ERROR", fmt.Errorf("video upload failed: %v", err)
 		}
 		msgProto = getVideoProto(m)
 	case DocumentMessage:
 		var err error
-		m.url, m.mediaKey, m.fileEncSha256, m.fileSha256, m.fileLength, err = wac.Upload(m.Content, MediaDocument)
+		m.url, m.mediaKey, m.fileEncSha256, m.fileSha256, m.fileLength, err = wac.uploadMedia(media, m.Content, MediaDocument)
 		if err != nil {
 			return "ERROR", fmt.Errorf("document upload failed: %v", err)
 		}
 		msgProto = getDocumentProto(m)
 	case AudioMessage:
 		var err error
-		m.url, m.mediaKey, m.fileEncSha256, m.fileSha256, m.fileLength, err = wac.Upload(m.Content, MediaAudio)
+		m.url, m.mediaKey, m.fileEncSha256, m.fileSha256, m.fileLength, err = wac.uploadMedia(media, m.Content, MediaAudio)
 		if err != nil {
 			return "ERROR", fmt.Errorf("audio upload failed: %v", err)
 		}
