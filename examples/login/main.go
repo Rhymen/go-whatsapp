@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	wac, err := whatsapp.NewConn(5 * time.Second, "gleandroj/go-whatsapp", "go-whatsapp")
+	wac, err := whatsapp.NewConn(5 * time.Second)
 	if err != nil {
 		panic(err)
 	}
