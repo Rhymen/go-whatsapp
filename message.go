@@ -178,7 +178,8 @@ ContextInfo represents contextinfo of every message
 type ContextInfo struct {
 	QuotedMessageID string //StanzaId
 	QuotedMessage   *proto.Message
-	Participant     string
+	MentionedJid    []string
+        Participant     string
 	IsForwarded     bool
 }
 
@@ -187,7 +188,8 @@ func getMessageContext(msg *proto.ContextInfo) ContextInfo {
 	return ContextInfo{
 		QuotedMessageID: msg.GetStanzaId(), //StanzaId
 		QuotedMessage:   msg.GetQuotedMessage(),
-		Participant:     msg.GetParticipant(),
+		MentionedJid:    msg.GetMentiononedJid(),
+                Participant:     msg.GetParticipant(),
 		IsForwarded:     msg.GetIsForwarded(),
 	}
 }
