@@ -108,7 +108,7 @@ func CheckCurrentServerVersion() ([]int, error) {
 
 	b64ClientId := base64.StdEncoding.EncodeToString(clientId)
 	login := []interface{}{"admin", "init", waVersion, []string{wac.longClientName, wac.shortClientName, wac.clientVersion}, b64ClientId, true}
-	loginChan, err := wac.writeJson(login)
+	loginChan, err := wac.writeJSON(login)
 	if err != nil {
 		return nil, fmt.Errorf("error writing login: %s", err.Error())
 	}
@@ -214,7 +214,7 @@ func (wac *Conn) Login(qrChan chan<- string) (Session, error) {
 
 	session.ClientId = base64.StdEncoding.EncodeToString(clientId)
 	login := []interface{}{"admin", "init", waVersion, []string{wac.longClientName, wac.shortClientName, wac.clientVersion}, session.ClientId, true}
-	loginChan, err := wac.writeJson(login)
+	loginChan, err := wac.writeJSON(login)
 	if err != nil {
 		return session, fmt.Errorf("error writing login: %v\n", err)
 	}
@@ -370,14 +370,14 @@ func (wac *Conn) Restore() error {
 
 	//admin init
 	init := []interface{}{"admin", "init", waVersion, []string{wac.longClientName, wac.shortClientName, wac.clientVersion}, wac.session.ClientId, true}
-	initChan, err := wac.writeJson(init)
+	initChan, err := wac.writeJSON(init)
 	if err != nil {
 		return fmt.Errorf("error writing admin init: %v\n", err)
 	}
 
 	//admin login with takeover
 	login := []interface{}{"admin", "login", wac.session.ClientToken, wac.session.ServerToken, wac.session.ClientId, "takeover"}
-	loginChan, err := wac.writeJson(login)
+	loginChan, err := wac.writeJSON(login)
 	if err != nil {
 		return fmt.Errorf("error writing admin login: %v\n", err)
 	}
@@ -480,7 +480,7 @@ func (wac *Conn) resolveChallenge(challenge string) error {
 	h2.Write([]byte(decoded))
 
 	ch := []interface{}{"admin", "challenge", base64.StdEncoding.EncodeToString(h2.Sum(nil)), wac.session.ServerToken, wac.session.ClientId}
-	challengeChan, err := wac.writeJson(ch)
+	challengeChan, err := wac.writeJSON(ch)
 	if err != nil {
 		return fmt.Errorf("error writing challenge: %v\n", err)
 	}
@@ -507,7 +507,7 @@ The session can not be resumed and will disappear on your phone in the WhatsAppW
 */
 func (wac *Conn) Logout() error {
 	login := []interface{}{"admin", "Conn", "disconnect"}
-	_, err := wac.writeJson(login)
+	_, err := wac.writeJSON(login)
 	if err != nil {
 		return fmt.Errorf("error writing logout: %v\n", err)
 	}
