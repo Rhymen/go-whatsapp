@@ -15,8 +15,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-//writeJson enqueues a json message into the writeChan
-func (wac *Conn) writeJson(data []interface{}) (<-chan string, error) {
+//writeJSON enqueues a json message into the writeChan
+func (wac *Conn) writeJSON(data []interface{}) (<-chan string, error) {
 
 	wac.writerLock.Lock()
 	defer wac.writerLock.Unlock()
@@ -94,7 +94,7 @@ func (wac *Conn) sendKeepAlive() error {
 func (wac *Conn) sendAdminTest() (bool, error) {
 	data := []interface{}{"admin", "test"}
 
-	r, err := wac.writeJson(data)
+	r, err := wac.writeJSON(data)
 	if err != nil {
 		return false, errors.Wrap(err, "error sending admin test")
 	}
@@ -104,17 +104,17 @@ func (wac *Conn) sendAdminTest() (bool, error) {
 	select {
 	case resp := <-r:
 		if err := json.Unmarshal([]byte(resp), &response); err != nil {
-			return false, fmt.Errorf("error decoding response message: %v\n", err)
+			return false, fmt.Errorf("error decoding response message: %v", err)
 		}
 	case <-time.After(wac.msgTimeout):
 		return false, ErrConnectionTimeout
 	}
 
-	if len(response) == 2 && response[0].(string) == "Pong" && response[1].(bool) == true {
-		return true, nil
-	} else {
+	if len(response) != 2 || response[0].(string) != "Pong" || response[1].(bool) != true {
 		return false, nil
 	}
+
+	return true, nil
 }
 
 func (wac *Conn) write(messageType int, answerMessageTag string, data []byte) (<-chan string, error) {
