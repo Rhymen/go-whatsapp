@@ -8,7 +8,7 @@ import (
 
 func (wac *Conn) GetGroupMetaData(jid string) (<-chan string, error) {
 	data := []interface{}{"query", "GroupMetadata", jid}
-	return wac.writeJson(data)
+	return wac.writeJSON(data)
 }
 
 func (wac *Conn) CreateGroup(subject string, participants []string) (<-chan string, error) {
@@ -41,7 +41,7 @@ func (wac *Conn) LeaveGroup(jid string) (<-chan string, error) {
 
 func (wac *Conn) GroupInviteLink(jid string) (string, error) {
 	request := []interface{}{"query", "inviteCode", jid}
-	ch, err := wac.writeJson(request)
+	ch, err := wac.writeJSON(request)
 	if err != nil {
 		return "", err
 	}
@@ -66,7 +66,7 @@ func (wac *Conn) GroupInviteLink(jid string) (string, error) {
 
 func (wac *Conn) GroupAcceptInviteCode(code string) (jid string, err error) {
 	request := []interface{}{"action", "invite", code}
-	ch, err := wac.writeJson(request)
+	ch, err := wac.writeJSON(request)
 	if err != nil {
 		return "", err
 	}
