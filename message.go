@@ -180,6 +180,7 @@ type ContextInfo struct {
 	QuotedMessage   *proto.Message
 	Participant     string
 	IsForwarded     bool
+	MentionedJid    []string //example : phonenumber@s.whatsapp.net
 }
 
 func getMessageContext(msg *proto.ContextInfo) ContextInfo {
@@ -189,13 +190,15 @@ func getMessageContext(msg *proto.ContextInfo) ContextInfo {
 		QuotedMessage:   msg.GetQuotedMessage(),
 		Participant:     msg.GetParticipant(),
 		IsForwarded:     msg.GetIsForwarded(),
+		MentionedJid:    msg.GetMentionedJid(),
 	}
 }
 
 func getContextInfoProto(context *ContextInfo) *proto.ContextInfo {
 	if len(context.QuotedMessageID) > 0 {
 		contextInfo := &proto.ContextInfo{
-			StanzaId: &context.QuotedMessageID,
+			StanzaId:     &context.QuotedMessageID,
+			MentionedJid: context.MentionedJid,
 		}
 
 		if &context.QuotedMessage != nil {
@@ -203,6 +206,13 @@ func getContextInfoProto(context *ContextInfo) *proto.ContextInfo {
 			contextInfo.Participant = &context.Participant
 		}
 
+		return contextInfo
+	}
+
+	if len(context.MentionedJid) > 0 {
+		contextInfo := &proto.ContextInfo{
+			MentionedJid: context.MentionedJid,
+		}
 		return contextInfo
 	}
 
