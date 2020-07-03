@@ -202,9 +202,11 @@ type ContextInfoProtoParam struct {
 
 func getContextInfoProto(p ContextInfoProtoParam) *proto.ContextInfo {
 	var mentiondata []string
-	re := regexp.MustCompile(`@[0-9]{7,17}`)
-	for _, t := range re.FindAll([]byte(*p.TextMessage), -1) {
-		mentiondata = append(mentiondata, string(t)[1:]+"@s.whatsapp.net")
+	if *p.TextMessage != "" && strings.Contains(*p.TextMessage, "@") {
+		re := regexp.MustCompile(`@[0-9]{7,17}`)
+		for _, t := range re.FindAll([]byte(*p.TextMessage), -1) {
+			mentiondata = append(mentiondata, string(t)[1:]+"@s.whatsapp.net")
+		}
 	}
 	if len(p.Context.QuotedMessageID) > 0 {
 		contextInfo := &proto.ContextInfo{
@@ -465,7 +467,8 @@ func getAudioMessage(msg *proto.WebMessageInfo) AudioMessage {
 
 func getAudioProto(msg AudioMessage) *proto.WebMessageInfo {
 	p := getInfoProto(&msg.Info)
-	contextInfo := getContextInfoProto(ContextInfoProtoParam{Context: &msg.ContextInfo})
+	text := ""
+	contextInfo := getContextInfoProto(ContextInfoProtoParam{&msg.ContextInfo, &text})
 	p.Message = &proto.Message{
 		AudioMessage: &proto.AudioMessage{
 			Url:           &msg.url,
@@ -532,7 +535,8 @@ func getDocumentMessage(msg *proto.WebMessageInfo) DocumentMessage {
 
 func getDocumentProto(msg DocumentMessage) *proto.WebMessageInfo {
 	p := getInfoProto(&msg.Info)
-	contextInfo := getContextInfoProto(ContextInfoProtoParam{Context: &msg.ContextInfo})
+	text := ""
+	contextInfo := getContextInfoProto(ContextInfoProtoParam{&msg.ContextInfo, &text})
 	p.Message = &proto.Message{
 		DocumentMessage: &proto.DocumentMessage{
 			JpegThumbnail: msg.Thumbnail,
@@ -590,7 +594,8 @@ func GetLocationMessage(msg *proto.WebMessageInfo) LocationMessage {
 
 func GetLocationProto(msg LocationMessage) *proto.WebMessageInfo {
 	p := getInfoProto(&msg.Info)
-	contextInfo := getContextInfoProto(ContextInfoProtoParam{Context: &msg.ContextInfo})
+	text := ""
+	contextInfo := getContextInfoProto(ContextInfoProtoParam{&msg.ContextInfo, &text})
 
 	p.Message = &proto.Message{
 		LocationMessage: &proto.LocationMessage{
@@ -731,7 +736,8 @@ func getContactMessage(msg *proto.WebMessageInfo) ContactMessage {
 
 func getContactMessageProto(msg ContactMessage) *proto.WebMessageInfo {
 	p := getInfoProto(&msg.Info)
-	contextInfo := getContextInfoProto(ContextInfoProtoParam{Context: &msg.ContextInfo})
+	text := ""
+	contextInfo := getContextInfoProto(ContextInfoProtoParam{&msg.ContextInfo, &text})
 
 	p.Message = &proto.Message{
 		ContactMessage: &proto.ContactMessage{
