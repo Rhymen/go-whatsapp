@@ -18,7 +18,7 @@ import (
 )
 
 //represents the WhatsAppWeb client version
-var waVersion = []int{2, 2033, 7}
+var waVersion = []int{2, 2035, 14}
 
 /*
 Session contains session individual information. To be able to resume the connection without scanning the qr code
