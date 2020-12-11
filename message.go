@@ -87,7 +87,7 @@ func (wac *Conn) Send(msg interface{}) (string, error) {
 			return getMessageInfo(msgProto).Id, nil
 		}
 	case <-time.After(wac.msgTimeout):
-		return "ERROR", fmt.Errorf("sending message timed out")
+		return getMessageInfo(msgProto).Id, fmt.Errorf("sending message timed out")
 	}
 
 	return "ERROR", nil
