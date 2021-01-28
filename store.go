@@ -42,8 +42,8 @@ func (wac *Conn) updateContacts(contacts interface{}) {
 	if !ok {
 		return
 	}
-	defer wac.Store.RUnlock()
-	wac.Store.RLock()
+	defer wac.Store.Unlock()
+	wac.Store.Lock()
 	for _, contact := range c {
 		contactNode, ok := contact.(binary.Node)
 		if !ok {
@@ -70,12 +70,12 @@ func (wac *Conn) GetStoreContactList() map[string]Contact {
 
 func (wac *Conn) GetStoreContact(jid string) (Contact, bool) {
 
+	defer wac.Store.RUnlock()
 	wac.Store.RLock()
+
 	if contact, ok := wac.Store.Contacts[jid]; ok {
 		return contact, ok
 	}
-
-	wac.Store.RUnlock()
 
 	return Contact{}, false
 }
@@ -86,8 +86,8 @@ func (wac *Conn) AddStoreContact(contact Contact) error {
 		return errors.New("jit cannot be empty ")
 	}
 
-	defer wac.Store.RUnlock()
-	wac.Store.RLock()
+	defer wac.Store.Unlock()
+	wac.Store.Lock()
 
 	jid := strings.Replace(contact.Jid, "@c.us", "@s.whatsapp.net", 1)
 	wac.Store.Contacts[jid] = contact
@@ -100,8 +100,10 @@ func (wac *Conn) updateChats(chats interface{}) {
 	if !ok {
 		return
 	}
-	defer wac.Store.RUnlock()
-	wac.Store.RLock()
+
+	defer wac.Store.Unlock()
+	wac.Store.Lock()
+
 	for _, chat := range c {
 		chatNode, ok := chat.(binary.Node)
 		if !ok {
@@ -130,12 +132,12 @@ func (wac *Conn) GetStoreChatList() map[string]Chat {
 
 func (wac *Conn) GetStoreChat(jid string) (Chat, bool) {
 
+	defer wac.Store.RUnlock()
 	wac.Store.RLock()
+
 	if chat, ok := wac.Store.Chats[jid]; ok {
 		return chat, ok
 	}
-
-	wac.Store.RUnlock()
 
 	return Chat{}, false
 }
