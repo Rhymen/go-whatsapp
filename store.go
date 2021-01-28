@@ -3,11 +3,14 @@ package whatsapp
 import (
 	"github.com/Rhymen/go-whatsapp/binary"
 	"strings"
+	"sync"
+	"errors"
 )
 
 type Store struct {
 	Contacts map[string]Contact
 	Chats    map[string]Chat
+	sync.RWMutex
 }
 
 type Contact struct {
@@ -30,6 +33,7 @@ func newStore() *Store {
 	return &Store{
 		make(map[string]Contact),
 		make(map[string]Chat),
+		sync.RWMutex{},
 	}
 }
 
@@ -38,7 +42,8 @@ func (wac *Conn) updateContacts(contacts interface{}) {
 	if !ok {
 		return
 	}
-
+	defer wac.Store.RUnlock()
+	wac.Store.RLock()
 	for _, contact := range c {
 		contactNode, ok := contact.(binary.Node)
 		if !ok {
@@ -55,12 +60,48 @@ func (wac *Conn) updateContacts(contacts interface{}) {
 	}
 }
 
+func (wac *Conn) GetStoreContactList() map[string]Contact {
+
+	defer wac.Store.RUnlock()
+	wac.Store.RLock()
+
+	return wac.Store.Contacts
+}
+
+func (wac *Conn) GetStoreContact(jid string) (Contact, bool) {
+
+	wac.Store.RLock()
+	if contact, ok := wac.Store.Contacts[jid]; ok {
+		return contact, ok
+	}
+
+	wac.Store.RUnlock()
+
+	return Contact{}, false
+}
+
+func (wac *Conn) AddStoreContact(contact Contact) error {
+
+	if contact.Jid == "" {
+		return errors.New("jit cannot be empty ")
+	}
+
+	defer wac.Store.RUnlock()
+	wac.Store.RLock()
+
+	jid := strings.Replace(contact.Jid, "@c.us", "@s.whatsapp.net", 1)
+	wac.Store.Contacts[jid] = contact
+
+	return nil
+}
+
 func (wac *Conn) updateChats(chats interface{}) {
 	c, ok := chats.([]interface{})
 	if !ok {
 		return
 	}
-
+	defer wac.Store.RUnlock()
+	wac.Store.RLock()
 	for _, chat := range c {
 		chatNode, ok := chat.(binary.Node)
 		if !ok {
@@ -77,4 +118,39 @@ func (wac *Conn) updateChats(chats interface{}) {
 			chatNode.Attributes["spam"],
 		}
 	}
+}
+
+func (wac *Conn) GetStoreChatList() map[string]Chat {
+
+	defer wac.Store.RUnlock()
+	wac.Store.RLock()
+
+	return wac.Store.Chats
+}
+
+func (wac *Conn) GetStoreChat(jid string) (Chat, bool) {
+
+	wac.Store.RLock()
+	if chat, ok := wac.Store.Chats[jid]; ok {
+		return chat, ok
+	}
+
+	wac.Store.RUnlock()
+
+	return Chat{}, false
+}
+
+func (wac *Conn) AddStoreChat(chat Chat) error {
+
+	if chat.Jid == "" {
+		return errors.New("jit cannot be empty ")
+	}
+
+	defer wac.Store.RUnlock()
+	wac.Store.RLock()
+
+	jid := strings.Replace(chat.Jid, "@c.us", "@s.whatsapp.net", 1)
+	wac.Store.Chats[jid] = chat
+
+	return nil
 }
