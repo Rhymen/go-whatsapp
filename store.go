@@ -37,13 +37,13 @@ func newStore() *Store {
 	}
 }
 
-func (wac *Conn) updateContacts(contacts interface{}) {
+func (sr *Store) updateContacts(contacts interface{}) {
 	c, ok := contacts.([]interface{})
 	if !ok {
 		return
 	}
-	defer wac.Store.Unlock()
-	wac.Store.Lock()
+	defer sr.Unlock()
+	sr.Lock()
 	for _, contact := range c {
 		contactNode, ok := contact.(binary.Node)
 		if !ok {
@@ -51,7 +51,7 @@ func (wac *Conn) updateContacts(contacts interface{}) {
 		}
 
 		jid := strings.Replace(contactNode.Attributes["jid"], "@c.us", "@s.whatsapp.net", 1)
-		wac.Store.Contacts[jid] = Contact{
+		sr.Contacts[jid] = Contact{
 			jid,
 			contactNode.Attributes["notify"],
 			contactNode.Attributes["name"],
@@ -60,49 +60,49 @@ func (wac *Conn) updateContacts(contacts interface{}) {
 	}
 }
 
-func (wac *Conn) GetStoreContactList() map[string]Contact {
+func (sr *Store) GetStoreContactList() map[string]Contact {
 
-	defer wac.Store.RUnlock()
-	wac.Store.RLock()
+	defer sr.RUnlock()
+	sr.RLock()
 
-	return wac.Store.Contacts
+	return sr.Contacts
 }
 
-func (wac *Conn) GetStoreContact(jid string) (Contact, bool) {
+func (sr *Store) GetStoreContact(jid string) (Contact, bool) {
 
-	defer wac.Store.RUnlock()
-	wac.Store.RLock()
+	defer sr.RUnlock()
+	sr.RLock()
 
-	if contact, ok := wac.Store.Contacts[jid]; ok {
+	if contact, ok := sr.Contacts[jid]; ok {
 		return contact, ok
 	}
 
 	return Contact{}, false
 }
 
-func (wac *Conn) AddStoreContact(contact Contact) error {
+func (sr *Store) AddStoreContact(contact Contact) error {
 
 	if contact.Jid == "" {
 		return errors.New("jit cannot be empty ")
 	}
 
-	defer wac.Store.Unlock()
-	wac.Store.Lock()
+	defer sr.Unlock()
+	sr.Lock()
 
 	jid := strings.Replace(contact.Jid, "@c.us", "@s.whatsapp.net", 1)
-	wac.Store.Contacts[jid] = contact
+	sr.Contacts[jid] = contact
 
 	return nil
 }
 
-func (wac *Conn) updateChats(chats interface{}) {
+func (sr *Store) updateChats(chats interface{}) {
 	c, ok := chats.([]interface{})
 	if !ok {
 		return
 	}
 
-	defer wac.Store.Unlock()
-	wac.Store.Lock()
+	defer sr.Unlock()
+	sr.Lock()
 
 	for _, chat := range c {
 		chatNode, ok := chat.(binary.Node)
@@ -111,7 +111,7 @@ func (wac *Conn) updateChats(chats interface{}) {
 		}
 
 		jid := strings.Replace(chatNode.Attributes["jid"], "@c.us", "@s.whatsapp.net", 1)
-		wac.Store.Chats[jid] = Chat{
+		sr.Chats[jid] = Chat{
 			jid,
 			chatNode.Attributes["name"],
 			chatNode.Attributes["count"],
@@ -122,37 +122,37 @@ func (wac *Conn) updateChats(chats interface{}) {
 	}
 }
 
-func (wac *Conn) GetStoreChatList() map[string]Chat {
+func (sr *Store) GetStoreChatList() map[string]Chat {
 
-	defer wac.Store.RUnlock()
-	wac.Store.RLock()
+	defer sr.RUnlock()
+	sr.RLock()
 
-	return wac.Store.Chats
+	return sr.Chats
 }
 
-func (wac *Conn) GetStoreChat(jid string) (Chat, bool) {
+func (sr *Store) GetStoreChat(jid string) (Chat, bool) {
 
-	defer wac.Store.RUnlock()
-	wac.Store.RLock()
+	defer sr.RUnlock()
+	sr.RLock()
 
-	if chat, ok := wac.Store.Chats[jid]; ok {
+	if chat, ok := sr.Chats[jid]; ok {
 		return chat, ok
 	}
 
 	return Chat{}, false
 }
 
-func (wac *Conn) AddStoreChat(chat Chat) error {
+func (sr *Store) AddStoreChat(chat Chat) error {
 
 	if chat.Jid == "" {
 		return errors.New("jit cannot be empty ")
 	}
 
-	defer wac.Store.RUnlock()
-	wac.Store.RLock()
+	defer sr.RUnlock()
+	sr.RLock()
 
 	jid := strings.Replace(chat.Jid, "@c.us", "@s.whatsapp.net", 1)
-	wac.Store.Chats[jid] = chat
+	sr.Chats[jid] = chat
 
 	return nil
 }
