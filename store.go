@@ -60,7 +60,7 @@ func (sr *Store) updateContacts(contacts interface{}) {
 	}
 }
 
-func (sr *Store) GetStoreContactList() map[string]Contact {
+func (sr *Store) GetContacts() map[string]Contact {
 
 	defer sr.RUnlock()
 	sr.RLock()
@@ -68,7 +68,7 @@ func (sr *Store) GetStoreContactList() map[string]Contact {
 	return sr.Contacts
 }
 
-func (sr *Store) GetStoreContact(jid string) (Contact, bool) {
+func (sr *Store) GetContact(jid string) (Contact, bool) {
 
 	defer sr.RUnlock()
 	sr.RLock()
@@ -80,7 +80,7 @@ func (sr *Store) GetStoreContact(jid string) (Contact, bool) {
 	return Contact{}, false
 }
 
-func (sr *Store) AddStoreContact(contact Contact) error {
+func (sr *Store) AddContact(contact Contact) error {
 
 	if contact.Jid == "" {
 		return errors.New("jit cannot be empty ")
@@ -122,7 +122,7 @@ func (sr *Store) updateChats(chats interface{}) {
 	}
 }
 
-func (sr *Store) GetStoreChatList() map[string]Chat {
+func (sr *Store) GetChats() map[string]Chat {
 
 	defer sr.RUnlock()
 	sr.RLock()
@@ -130,7 +130,7 @@ func (sr *Store) GetStoreChatList() map[string]Chat {
 	return sr.Chats
 }
 
-func (sr *Store) GetStoreChat(jid string) (Chat, bool) {
+func (sr *Store) GetChat(jid string) (Chat, bool) {
 
 	defer sr.RUnlock()
 	sr.RLock()
@@ -142,7 +142,7 @@ func (sr *Store) GetStoreChat(jid string) (Chat, bool) {
 	return Chat{}, false
 }
 
-func (sr *Store) AddStoreChat(chat Chat) error {
+func (sr *Store) AddChat(chat Chat) error {
 
 	if chat.Jid == "" {
 		return errors.New("jit cannot be empty ")
