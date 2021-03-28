@@ -811,34 +811,38 @@ OrderMessage represents a order message.
 */
 
 type OrderMessage struct {
-	Info        MessageInfo
-	OrderId     string
-	Thumbnail   []byte
-	ItemCount   int32
-	Status      proto.OrderMessage_OrderMessageOrderStatus
-	Surface     proto.OrderMessage_OrderMessageOrderSurface
-	Message     string
-	OrderTitle  string
-	SellerJid   string
-	Token       string
-	ContextInfo ContextInfo
+	Info              MessageInfo
+	OrderId           string
+	Thumbnail         []byte
+	ItemCount         int32
+	Status            proto.OrderMessage_OrderMessageOrderStatus
+	Surface           proto.OrderMessage_OrderMessageOrderSurface
+	Message           string
+	OrderTitle        string
+	SellerJid         string
+	Token             string
+	TotalAmount1000   int64
+	TotalCurrencyCode string
+	ContextInfo       ContextInfo
 }
 
 func getOrderMessage(msg *proto.WebMessageInfo) OrderMessage {
 	order := msg.GetMessage().GetOrderMessage()
 
 	orderMessage := OrderMessage{
-		Info:        getMessageInfo(msg),
-		OrderId:     order.GetOrderId(),
-		Thumbnail:   order.GetThumbnail(),
-		ItemCount:   order.GetItemCount(),
-		Status:      order.GetStatus(),
-		Surface:     order.GetSurface(),
-		Message:     order.GetMessage(),
-		OrderTitle:  order.GetOrderTitle(),
-		SellerJid:   order.GetSellerJid(),
-		Token:       order.GetToken(),
-		ContextInfo: getMessageContext(order.GetContextInfo()),
+		Info:              getMessageInfo(msg),
+		OrderId:           order.GetOrderId(),
+		Thumbnail:         order.GetThumbnail(),
+		ItemCount:         order.GetItemCount(),
+		Status:            order.GetStatus(),
+		Surface:           order.GetSurface(),
+		Message:           order.GetMessage(),
+		OrderTitle:        order.GetOrderTitle(),
+		SellerJid:         order.GetSellerJid(),
+		Token:             order.GetToken(),
+		TotalAmount1000:   order.GetTotalAmount1000(),
+		TotalCurrencyCode: order.GetTotalCurrencyCode(),
+		ContextInfo:       getMessageContext(order.GetContextInfo()),
 	}
 
 	return orderMessage
@@ -850,15 +854,17 @@ func getOrderMessageProto(msg OrderMessage) *proto.WebMessageInfo {
 
 	p.Message = &proto.Message{
 		OrderMessage: &proto.OrderMessage{
-			Thumbnail:   msg.Thumbnail,
-			ItemCount:   &msg.ItemCount,
-			Status:      &msg.Status,
-			Surface:     &msg.Surface,
-			Message:     &msg.Message,
-			OrderTitle:  &msg.OrderTitle,
-			SellerJid:   &msg.SellerJid,
-			Token:       &msg.Token,
-			ContextInfo: contextInfo,
+			Thumbnail:         msg.Thumbnail,
+			ItemCount:         &msg.ItemCount,
+			Status:            &msg.Status,
+			Surface:           &msg.Surface,
+			Message:           &msg.Message,
+			OrderTitle:        &msg.OrderTitle,
+			SellerJid:         &msg.SellerJid,
+			Token:             &msg.Token,
+			TotalAmount1000:   &msg.TotalAmount1000,
+			TotalCurrencyCode: &msg.TotalCurrencyCode,
+			ContextInfo:       contextInfo,
 		},
 	}
 
