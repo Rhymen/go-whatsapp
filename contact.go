@@ -309,3 +309,11 @@ func (wac *Conn) SearchOrder(catalogWid, stanzaId string) (<-chan string, error)
 	}}
 	return wac.writeJson(data)
 }
+
+func (wac *Conn) BusinessProfile(wid string) (<-chan string, error) {
+	query := map[string]string{
+		"wid": wid,
+	}
+	data := []interface{}{"query", "businessProfile", []map[string]string{query}}
+	return wac.writeJson(data)
+}
