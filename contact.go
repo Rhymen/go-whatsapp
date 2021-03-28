@@ -287,6 +287,7 @@ func (wac *Conn) handleBlockContact(action, jid string) (<-chan string, error) {
 	return wac.writeBinary(n, contact, ignore, tag)
 }
 
+// Search product details on order
 func (wac *Conn) SearchProductDetails(id, orderId, token string) (<-chan string, error) {
 	data := []interface{}{"query", "order", map[string]string{
 		"id":          id,
@@ -298,6 +299,7 @@ func (wac *Conn) SearchProductDetails(id, orderId, token string) (<-chan string,
 	return wac.writeJson(data)
 }
 
+// Order search and get product catalog reh
 func (wac *Conn) SearchOrder(catalogWid, stanzaId string) (<-chan string, error) {
 	data := []interface{}{"query", "bizCatalog", map[string]string{
 		"catalogWid": catalogWid,
@@ -310,6 +312,7 @@ func (wac *Conn) SearchOrder(catalogWid, stanzaId string) (<-chan string, error)
 	return wac.writeJson(data)
 }
 
+// Company details for Whatsapp Business
 func (wac *Conn) BusinessProfile(wid string) (<-chan string, error) {
 	query := map[string]string{
 		"wid": wid,
