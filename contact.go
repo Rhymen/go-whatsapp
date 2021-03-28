@@ -287,13 +287,25 @@ func (wac *Conn) handleBlockContact(action, jid string) (<-chan string, error) {
 	return wac.writeBinary(n, contact, ignore, tag)
 }
 
-func (wac *Conn) GetOrders(id, orderId, token string) (<-chan string, error) {
+func (wac *Conn) SearchProductDetails(id, orderId, token string) (<-chan string, error) {
 	data := []interface{}{"query", "order", map[string]string{
 		"id":          id,
 		"orderId":     orderId,
 		"imageHeight": strconv.Itoa(80),
 		"imageWidth":  strconv.Itoa(80),
 		"token":       token,
+	}}
+	return wac.writeJson(data)
+}
+
+func (wac *Conn) SearchOrder(catalogWid, stanzaId string) (<-chan string, error) {
+	data := []interface{}{"query", "bizCatalog", map[string]string{
+		"catalogWid": catalogWid,
+		"limit":      strconv.Itoa(10),
+		"height":     strconv.Itoa(100),
+		"width":      strconv.Itoa(100),
+		"stanza_id":  stanzaId,
+		"type":       "get_product_catalog_reh",
 	}}
 	return wac.writeJson(data)
 }
