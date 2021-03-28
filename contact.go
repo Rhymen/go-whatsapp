@@ -286,3 +286,14 @@ func (wac *Conn) handleBlockContact(action, jid string) (<-chan string, error) {
 
 	return wac.writeBinary(n, contact, ignore, tag)
 }
+
+func (wac *Conn) GetOrders(id, orderId, token string) (<-chan string, error) {
+	data := []interface{}{"query", "order", map[string]string{
+		"id":          id,
+		"orderId":     orderId,
+		"imageHeight": strconv.Itoa(80),
+		"imageWidth":  strconv.Itoa(80),
+		"token":       token,
+	}}
+	return wac.writeJson(data)
+}
