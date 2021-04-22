@@ -6,5 +6,3 @@ require (
 )
 
 replace github.com/Rhymen/go-whatsapp => ../../
-
-go 1.13
