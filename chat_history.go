@@ -1,6 +1,7 @@
 package whatsapp
 
 import (
+	"fmt"
 	"github.com/Rhymen/go-whatsapp/binary"
 	"github.com/Rhymen/go-whatsapp/binary/proto"
 	"log"
@@ -180,4 +181,38 @@ func (wac *Conn) LoadFullChatHistoryAfter(jid string, messageId string, chunkSiz
 
 	}
 
+}
+
+// ArchiveChat Archive conversations
+func (wac *Conn) ArchiveChat(jid, id string) (<-chan string, error) {
+	return wac.handleArchiveUnarchiveChat(jid, id, "archive")
+}
+
+// UnarchiveChat Unarchive conversations
+func (wac *Conn) UnarchiveChat(jid, id string) (<-chan string, error) {
+	return wac.handleArchiveUnarchiveChat(jid, id, "unarchive")
+}
+
+func (wac *Conn) handleArchiveUnarchiveChat(jid, id, action string) (<-chan string, error) {
+	ts := time.Now().Unix()
+	tag := fmt.Sprintf("%d.--%d", ts, wac.msgCount)
+
+	n := binary.Node{
+		Description: "action",
+		Attributes: map[string]string{
+			"type":  "set",
+			"epoch": strconv.Itoa(wac.msgCount),
+		},
+		Content: []interface{}{binary.Node{
+			Description: "chat",
+			Attributes: map[string]string{
+				"type":  action,
+				"index": id,
+				"jid":   jid,
+				"owner": "true",
+			},
+		}},
+	}
+
+	return wac.writeBinary(n, group, ignore, tag)
 }
