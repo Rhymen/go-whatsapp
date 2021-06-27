@@ -25,8 +25,9 @@ func main() {
 
 	wac, err := whatsapp.NewConnWithOptions(&whatsapp.Options{
 		// timeout
-		Timeout: 20 * time.Second,
-		Proxy:   proxy,
+		Timeout:   20 * time.Second,
+		QrTimeout: 300 * time.Second,
+		Proxy:     proxy,
 		// set custom client name
 		ShortClientName: "My-WhatsApp-Client",
 		LongClientName:  "My-WhatsApp-Clientttttttttttttt",

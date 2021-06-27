@@ -259,7 +259,7 @@ func (wac *Conn) Login(qrChan chan<- string) (Session, error) {
 		if err := json.Unmarshal([]byte(r1), &resp2); err != nil {
 			return session, fmt.Errorf("error decoding qr code resp: %v", err)
 		}
-	case <-time.After(time.Duration(resp["ttl"].(float64)) * time.Millisecond):
+	case <-time.After(wac.qrTimeout):
 		return session, fmt.Errorf("qr code scan timed out")
 	}
 

@@ -67,6 +67,8 @@ const (
 	skipOffline
 )
 
+const qrTimeout = 20 * time.Second
+
 /*
 Conn is created by NewConn. Interacting with the initialized Conn is the main way of interacting with our package.
 It holds all necessary information to make the package work internally.
@@ -84,6 +86,7 @@ type Conn struct {
 	handler        []Handler
 	msgCount       int
 	msgTimeout     time.Duration
+	qrTimeout      time.Duration
 	Info           *Info
 	Store          *Store
 	ServerLastSeen time.Time
@@ -117,37 +120,42 @@ The goroutine for handling incoming messages is started
 */
 func NewConn(timeout time.Duration) (*Conn, error) {
 	return NewConnWithOptions(&Options{
-		Timeout: timeout,
+		Timeout:   timeout,
+		QrTimeout: qrTimeout,
 	})
 }
 
 // NewConnWithProxy Create a new connect with a given timeout and a http proxy.
 func NewConnWithProxy(timeout time.Duration, proxy func(*http.Request) (*url.URL, error)) (*Conn, error) {
 	return NewConnWithOptions(&Options{
-		Timeout: timeout,
-		Proxy: proxy,
+		Timeout:   timeout,
+		QrTimeout: qrTimeout,
+		Proxy:     proxy,
 	})
 }
 
 // NewConnWithOptions Create a new connect with a given options.
 type Options struct {
-	Proxy            func(*http.Request) (*url.URL, error)
-	Timeout          time.Duration
-	Handler          []Handler
-	ShortClientName  string
-	LongClientName   string
-	ClientVersion    string
-	Store            *Store
+	Proxy           func(*http.Request) (*url.URL, error)
+	Timeout         time.Duration
+	QrTimeout       time.Duration
+	Handler         []Handler
+	ShortClientName string
+	LongClientName  string
+	ClientVersion   string
+	Store           *Store
 }
+
 func NewConnWithOptions(opt *Options) (*Conn, error) {
 	if opt == nil {
 		return nil, ErrOptionsNotProvided
 	}
 	wac := &Conn{
-		handler:    make([]Handler, 0),
-		msgCount:   0,
-		msgTimeout: opt.Timeout,
-		Store:      newStore(),
+		handler:         make([]Handler, 0),
+		msgCount:        0,
+		msgTimeout:      opt.Timeout,
+		qrTimeout:       qrTimeout,
+		Store:           newStore(),
 		longClientName:  "github.com/Rhymen/go-whatsapp",
 		shortClientName: "go-whatsapp",
 		clientVersion:   "0.1.0",
@@ -161,6 +169,10 @@ func NewConnWithOptions(opt *Options) (*Conn, error) {
 	if opt.Proxy != nil {
 		wac.Proxy = opt.Proxy
 	}
+	if opt.QrTimeout != time.Duration(0) {
+		wac.qrTimeout = opt.QrTimeout
+	}
+
 	if len(opt.ShortClientName) != 0 {
 		wac.shortClientName = opt.ShortClientName
 	}
