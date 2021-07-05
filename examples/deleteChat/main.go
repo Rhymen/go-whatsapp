@@ -21,6 +21,7 @@ type waHandler struct {
 func (h *waHandler) ShouldCallSynchronously() bool {
 	return true
 }
+
 func (w *waHandler) HandleChatList(chats []whatsapp.Chat) {
 	fmt.Println("Chat list received")
 	chatMap := make(map[string]whatsapp.Chat)
@@ -117,6 +118,7 @@ func main() {
 	output := <-ch
 	fmt.Println(output)
 }
+
 func readSession() (whatsapp.Session, error) {
 	session := whatsapp.Session{}
 	file, err := os.Open(os.TempDir() + "/whatsappSession.gob")
@@ -131,6 +133,7 @@ func readSession() (whatsapp.Session, error) {
 	}
 	return session, nil
 }
+
 func writeSession(session whatsapp.Session) error {
 	file, err := os.Create(os.TempDir() + "/whatsappSession.gob")
 	if err != nil {
