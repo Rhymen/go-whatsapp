@@ -1,5 +1,5 @@
 package main
-​
+
 import (
 	"bufio"
 	"encoding/gob"
@@ -8,20 +8,19 @@ import (
 	"os"
 	"strconv"
 	"time"
-​
+
 	qrcodeTerminal "github.com/Baozisoftware/qrcode-terminal-go"
 	"github.com/Rhymen/go-whatsapp"
 )
-​
+
 type waHandler struct {
 	c            *whatsapp.Conn
 	ReceivedChat chan struct{}
 }
-​
+
 func (h *waHandler) ShouldCallSynchronously() bool {
 	return true
 }
-​
 func (w *waHandler) HandleChatList(chats []whatsapp.Chat) {
 	fmt.Println("Chat list received")
 	chatMap := make(map[string]whatsapp.Chat)
@@ -33,10 +32,9 @@ func (w *waHandler) HandleChatList(chats []whatsapp.Chat) {
 	}
 	w.ReceivedChat <- struct{}{}
 }
-​
+
 //HandleError needs to be implemented to be a valid WhatsApp handler
 func (h *waHandler) HandleError(err error) {
-​
 	if e, ok := err.(*whatsapp.ErrConnectionFailed); ok {
 		log.Printf("Connection failed, underlying error: %v", e.Err)
 		log.Println("Waiting 30sec...")
@@ -50,7 +48,7 @@ func (h *waHandler) HandleError(err error) {
 		log.Printf("error occoured: %v\n", err)
 	}
 }
-​
+
 func main() {
 	//create new WhatsApp connection
 	wac, err := whatsapp.NewConn(5 * time.Second)
@@ -60,7 +58,6 @@ func main() {
 	}
 	wac.SetClientVersion(2, 2121, 6)
 	wac.SetClientName("Ubuntu", "Linux", "0.1.0")
-​
 	//load saved session
 	session, err := readSession()
 	if err == nil {
@@ -82,33 +79,38 @@ func main() {
 			fmt.Fprintf(os.Stderr, "error during login: %v\n", err)
 		}
 	}
-​
-	//save session
 	err = writeSession(session)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error saving session: %v\n", err)
 	}
-​
 	fmt.Printf("login successful, session: %v\n", session)
-​
+
 	//Add handler
 	handler := &waHandler{wac, make(chan struct{}, 1)}
 	wac.AddHandler(handler)
-​
+
+	// Get Chat list
 	<-handler.ReceivedChat
 	fmt.Printf("Listing chats\n")
-	chatMap := make(map[string]string)
+	chatMap := make(map[int]string)
 	i := 0
-	for jid, contact := range wac.Store.Chats {
-		chatMap[strconv.Itoa(i)] = jid
+	for _, contact := range wac.Store.Chats {
+		chatMap[i] = contact.Jid
 		fmt.Printf("%d - %+v\n", i, contact)
 		i++
 	}
 	fmt.Println("Please choose a chat number:")
 	reader := bufio.NewReader(os.Stdin)
-	number, _ := reader.ReadString('\n')
-	fmt.Println(chatMap[number])
-	ch, err := wac.DeleteChat("XXXXXXXXXXXXX@c.us")
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Printf("Failed to read chat number due to %+v", err)
+	}
+	number, err := strconv.Atoi(input[:len(input)-1])
+	if err != nil {
+		fmt.Printf("Failed to convert chat number to Int %+v", err)
+	}
+	fmt.Println(chatMap[number], number, chatMap)
+	ch, err := wac.DeleteChat(chatMap[number])
 	if err != nil {
 		fmt.Println("err:", err)
 	}
@@ -129,7 +131,6 @@ func readSession() (whatsapp.Session, error) {
 	}
 	return session, nil
 }
-​
 func writeSession(session whatsapp.Session) error {
 	file, err := os.Create(os.TempDir() + "/whatsappSession.gob")
 	if err != nil {

@@ -174,18 +174,20 @@ func (wac *Conn) DeleteMessage(remotejid, msgid string, fromMe bool) error {
 }
 
 // Delete a Chat
-func (wac *Conn) DeleteChat(remotejid string) (<-chan string, error) {
+func (wac *Conn) DeleteChat(jid string) (<-chan string, error) {
 	var msgid string
 	var owner string
 
-	node, err := wac.query("message", remotejid, "", "before", "true", "", 1, 0)
+	// Get last message id
+	node, err := wac.query("message", jid, "", "before", "true", "", 1, 0)
 	if err != nil {
-		return make(chan string, 1), err
+		return make(chan string, 1), fmt.Errorf("Failed to get last message of %s id due to %s", jid, err)
 	}
 	for _, msg := range decodeMessages(node) {
 		msgid = *msg.Key.Id
 		owner = strconv.FormatBool(*msg.Key.FromMe)
 	}
+
 	ts := time.Now().Unix()
 	tag := fmt.Sprintf("%d.--%d", ts, wac.msgCount)
 	n := binary.Node{
@@ -199,8 +201,9 @@ func (wac *Conn) DeleteChat(remotejid string) (<-chan string, error) {
 				Description: "chat",
 				Attributes: map[string]string{
 					"type":  "clear",
-					"jid":   remotejid,
+					"jid":   jid,
 					"star":  "true",
+					"media": "true",
 					"index": msgid,
 					"owner": owner,
 				},
