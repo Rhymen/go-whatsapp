@@ -69,6 +69,8 @@ func (wac *Conn) Send(msg interface{}) (string, error) {
 		msgProto = getProductMessageProto(m)
 	case OrderMessage:
 		msgProto = getOrderMessageProto(m)
+	case ListMessage:
+		msgProto = getListMessageproto(m)
 	default:
 		return "ERROR", fmt.Errorf("cannot match type %T, use message types declared in the package", msg)
 	}
@@ -914,6 +916,87 @@ func getProductMessageProto(msg ProductMessage) *proto.WebMessageInfo {
 	return p
 }
 
+/*
+ListMessage represents a List message
+*/
+
+type ListMessage struct {
+	Info            MessageInfo
+	Title           string
+	Description     string
+	ButtonText      string
+	ListType        proto.ListMessage_ListMessageListType
+	Sections        []*proto.Section
+	ProductListInfo *proto.ProductListInfo
+	FooterText      string
+	ContextInfo     ContextInfo
+}
+
+func GetListMessage(msg *proto.WebMessageInfo) ListMessage {
+	list := msg.GetMessage().GetListMessage()
+
+	listMessage := ListMessage{
+		Info:            getMessageInfo(msg),
+		Title:           list.GetTitle(),
+		Description:     list.GetDescription(),
+		ButtonText:      list.GetButtonText(),
+		ListType:        list.GetListType(),
+		Sections:        list.GetSections(),
+		ProductListInfo: list.GetProductListInfo(),
+		FooterText:      list.GetFooterText(),
+		ContextInfo:     getMessageContext(list.GetContextInfo()),
+	}
+
+	return listMessage
+}
+
+func getListMessageproto(msg ListMessage) *proto.WebMessageInfo {
+	p := getInfoProto(&msg.Info)
+	contextInfo := getContextInfoProto(&msg.ContextInfo)
+
+	p.Message = &proto.Message{
+		ListMessage: &proto.ListMessage{
+			Title:       &msg.Title,
+			Description: &msg.Description,
+			ButtonText:  &msg.ButtonText,
+			ListType:    &msg.ListType,
+			Sections:    msg.Sections,
+			ContextInfo: contextInfo,
+		},
+	}
+	return p
+}
+
+/*
+ListResponseMessage represents a List response message
+*/
+type ListResponseMessage struct {
+	Info              MessageInfo
+	Title             string
+	ListType          proto.ListResponseMessage_ListResponseMessageListType
+	SingleSelectReply SingleSelectReply
+	ContextInfo       ContextInfo
+	Description       string
+}
+
+type SingleSelectReply struct {
+	SelectedRowId string
+}
+
+func GetListResponseMessage(msg *proto.WebMessageInfo) ListResponseMessage {
+	list := msg.GetMessage().GetListResponseMessage()
+	list_response_message := ListResponseMessage{
+		Info:              getMessageInfo(msg),
+		Title:             list.GetTitle(),
+		ListType:          list.GetListType(),
+		SingleSelectReply: SingleSelectReply{list.GetSingleSelectReply().GetSelectedRowId()},
+		ContextInfo:       getMessageContext(list.GetContextInfo()),
+		Description:       list.GetDescription(),
+	}
+
+	return list_response_message
+}
+
 func ParseProtoMessage(msg *proto.WebMessageInfo) interface{} {
 
 	switch {
@@ -953,6 +1036,12 @@ func ParseProtoMessage(msg *proto.WebMessageInfo) interface{} {
 
 	case msg.GetMessage().GetOrderMessage() != nil:
 		return getOrderMessage(msg)
+
+	case msg.GetMessage().GetListMessage() != nil:
+		return GetListMessage(msg)
+
+	case msg.GetMessage().GetListResponseMessage() != nil:
+		return GetListResponseMessage(msg)
 
 	default:
 		//cannot match message
