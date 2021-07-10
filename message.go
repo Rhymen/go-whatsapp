@@ -956,12 +956,14 @@ func getListMessageproto(msg ListMessage) *proto.WebMessageInfo {
 
 	p.Message = &proto.Message{
 		ListMessage: &proto.ListMessage{
-			Title:       &msg.Title,
-			Description: &msg.Description,
-			ButtonText:  &msg.ButtonText,
-			ListType:    &msg.ListType,
-			Sections:    msg.Sections,
-			ContextInfo: contextInfo,
+			Title:           &msg.Title,
+			Description:     &msg.Description,
+			ButtonText:      &msg.ButtonText,
+			ListType:        &msg.ListType,
+			Sections:        msg.Sections,
+			ProductListInfo: msg.ProductListInfo,
+			FooterText:      &msg.FooterText,
+			ContextInfo:     contextInfo,
 		},
 	}
 	return p
