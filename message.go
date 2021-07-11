@@ -919,29 +919,41 @@ func getProductMessageProto(msg ProductMessage) *proto.WebMessageInfo {
 /*
 ListMessage represents a List message
 */
-
+/*Title *string `protobuf:"bytes,1,opt,name=title" json:"title,omitempty"`
+Rows  []*Row */
 type ListMessage struct {
 	Info            MessageInfo
 	Title           string
 	Description     string
 	ButtonText      string
 	ListType        proto.ListMessage_ListMessageListType
-	Sections        []*proto.Section
+	Sections        []Section
 	ProductListInfo *proto.ProductListInfo
 	FooterText      string
 	ContextInfo     ContextInfo
 }
 
+type Section struct {
+	Title string
+	Rows  []Row
+}
+
+type Row struct {
+	Title       string
+	Description string
+	RowId       string
+}
+
 func GetListMessage(msg *proto.WebMessageInfo) ListMessage {
 	list := msg.GetMessage().GetListMessage()
-
+	sections := getSections(list.GetSections())
 	listMessage := ListMessage{
 		Info:            getMessageInfo(msg),
 		Title:           list.GetTitle(),
 		Description:     list.GetDescription(),
 		ButtonText:      list.GetButtonText(),
 		ListType:        list.GetListType(),
-		Sections:        list.GetSections(),
+		Sections:        sections,
 		ProductListInfo: list.GetProductListInfo(),
 		FooterText:      list.GetFooterText(),
 		ContextInfo:     getMessageContext(list.GetContextInfo()),
@@ -950,23 +962,77 @@ func GetListMessage(msg *proto.WebMessageInfo) ListMessage {
 	return listMessage
 }
 
+func getSections(section_proto []*proto.Section) (sections []Section) {
+
+	if section_proto != nil {
+		for _, s := range section_proto {
+			var row []Row
+			if s.Rows != nil {
+				for _, r := range s.GetRows() {
+					row = append(row, Row{
+						Title:       r.GetTitle(),
+						Description: r.GetDescription(),
+						RowId:       r.GetRowId(),
+					})
+				}
+			}
+			sections = append(sections, Section{
+				Title: s.GetTitle(),
+				Rows:  row,
+			})
+		}
+
+	}
+	return
+
+}
+
 func getListMessageproto(msg ListMessage) *proto.WebMessageInfo {
 	p := getInfoProto(&msg.Info)
 	contextInfo := getContextInfoProto(&msg.ContextInfo)
-
+	sections := getSectionsproto(msg.Sections)
 	p.Message = &proto.Message{
 		ListMessage: &proto.ListMessage{
 			Title:           &msg.Title,
 			Description:     &msg.Description,
 			ButtonText:      &msg.ButtonText,
 			ListType:        &msg.ListType,
-			Sections:        msg.Sections,
+			Sections:        sections,
 			ProductListInfo: msg.ProductListInfo,
 			FooterText:      &msg.FooterText,
 			ContextInfo:     contextInfo,
 		},
 	}
 	return p
+}
+
+func getSectionsproto(sections []Section) (sections_proto []*proto.Section) {
+	/*type Section struct {
+	  	Title string
+	  	Rows  []Row
+	  }
+
+	  type Row struct {
+	  	Title       string
+	  	Description string
+	  	RowId       string
+	  }*/
+	for _, section := range sections {
+		var row []*proto.Row
+		for _, r := range section.Rows {
+			row = append(row, &proto.Row{
+				Title:       &r.Title,
+				Description: &r.Description,
+				RowId:       &r.RowId,
+			})
+		}
+		sections_proto = append(sections_proto, &proto.Section{
+			Title: &section.Title,
+			Rows:  row,
+		})
+	}
+
+	return
 }
 
 /*

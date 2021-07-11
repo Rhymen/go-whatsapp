@@ -35,32 +35,46 @@ func main() {
 
 	ContextInfo := whatsapp.ContextInfo{
 		QuotedMessage:   &quotedMessage,
-		QuotedMessageID: "F229B6BCCE2A0D6BBB0AA56110887D20",
-		Participant:     "919315346424@s.whatsapp.net", //Who sent the original message
+		QuotedMessageID: "", //Original message ID
+		Participant:     "", //Who sent the original message
 	}
 
-	title := "List 1"
-	description := "description 1"
-	rowId := "rowId1"
-
-	var Section = []*proto.Section{ ///
+	var Section = []whatsapp.Section{ ///
 		{
-			Title: &title,
-			Rows: []*proto.Row{{
-				Title:       &title,
-				Description: &description,
-				RowId:       &rowId,
-			}},
+			Title: "Section title 1",
+			Rows: []whatsapp.Row{{
+				Title:       "Row title 1",
+				Description: "Row description 1",
+				RowId:       "rowid1", // no white space in rowid
+			},
+				{
+					Title:       "Row title 2",
+					Description: "Row description 2",
+					RowId:       "rowId2",
+				},
+			},
 		},
 	}
+	Section = append(Section, whatsapp.Section{
+		Title: "Section title 2",
+		Rows: []whatsapp.Row{
+			{
+				Title:       "Row title 3",
+				Description: "Row description 3",
+				RowId:       "rowId3",
+			},
+		},
+	},
+	)
+
 	msg := whatsapp.ListMessage{
 		Info: whatsapp.MessageInfo{
-			RemoteJid: "966593276726-1614673783@g.us",
+			RemoteJid: "xxxx-1617096064@g.us",
 		},
 		ContextInfo: ContextInfo,
-		Title:       "This is List title",
-		Description: "This is List description",
-		ButtonText:  "This is List buttonText",
+		Title:       "This is List *title*",
+		Description: "This is List _description_",
+		ButtonText:  "This is List buttonText", // ButtonText dosn't support html tag
 		FooterText:  "This is List footerText",
 		ListType:    proto.ListMessage_SINGLE_SELECT,
 		Sections:    Section,
