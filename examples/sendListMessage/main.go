@@ -39,7 +39,7 @@ func main() {
 		Participant:     "", //Who sent the original message
 	}
 
-	var Section = []whatsapp.Section{ ///
+	var Section = []whatsapp.Section{
 		{
 			Title: "Section title 1",
 			Rows: []whatsapp.Row{{
@@ -75,7 +75,7 @@ func main() {
 		Title:       "This is List *title*",
 		Description: "This is List _description_",
 		ButtonText:  "This is List buttonText", // ButtonText dosn't support html tag
-		FooterText:  "This is List footerText",
+		FooterText:  "This is List footerText", // this isn't actually showing in whatsapp web
 		ListType:    proto.ListMessage_SINGLE_SELECT,
 		Sections:    Section,
 	}

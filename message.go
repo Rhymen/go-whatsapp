@@ -919,8 +919,6 @@ func getProductMessageProto(msg ProductMessage) *proto.WebMessageInfo {
 /*
 ListMessage represents a List message
 */
-/*Title *string `protobuf:"bytes,1,opt,name=title" json:"title,omitempty"`
-Rows  []*Row */
 type ListMessage struct {
 	Info            MessageInfo
 	Title           string
@@ -1007,16 +1005,6 @@ func getListMessageproto(msg ListMessage) *proto.WebMessageInfo {
 }
 
 func getSectionsproto(sections []Section) (sections_proto []*proto.Section) {
-	/*type Section struct {
-	  	Title string
-	  	Rows  []Row
-	  }
-
-	  type Row struct {
-	  	Title       string
-	  	Description string
-	  	RowId       string
-	  }*/
 	for _, section := range sections {
 		var row []*proto.Row
 		for _, r := range section.Rows {
