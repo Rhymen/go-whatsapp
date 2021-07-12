@@ -1992,7 +1992,7 @@ type ListMessage_ListMessageListType int32
 
 const (
 	ListMessage_UNKNOWN       ListMessage_ListMessageListType = 0
-	ListMessage_SINGLE_SELECT ListMessage_ListMessageListType = 1
+	ListMessage_SINGLE_SELECT ListMessage_ListMessageListType = 1 // It's here 
 	ListMessage_PRODUCT_LIST  ListMessage_ListMessageListType = 2
 )
 
