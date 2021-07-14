@@ -78,6 +78,17 @@ func (myHandler) HandleNewContact(contact whatsapp.Contact) {
 	fmt.Println(contact)
 }
 
+func (myHandler) HandleListResponseMessage(list_response_message whatsapp.ListResponseMessage) {
+	fmt.Println(list_response_message)
+}
+
+
+func (myHandler) HandleListMessage(listMessage whatsapp.ListMessage) {
+	fmt.Println(listMessage)
+}
+
+
+
 wac.AddHandler(myHandler{})
 ```
 The message handlers are all optional, you don't need to implement anything but the error handler to implement the interface. The ImageMessage, VideoMessage, AudioMessage and DocumentMessage provide a Download function to get the media data.
