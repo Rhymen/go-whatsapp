@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+func (wac *Conn) GetBroadcastMetaData(jid string) (<-chan string, error) {
+	data := []interface{}{"query", "contact", jid}
+	return wac.writeJson(data)
+}
+
 func (wac *Conn) GetGroupMetaData(jid string) (<-chan string, error) {
 	data := []interface{}{"query", "GroupMetadata", jid}
 	return wac.writeJson(data)
