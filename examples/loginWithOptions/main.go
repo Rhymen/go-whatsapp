@@ -30,6 +30,7 @@ func main() {
 		// set custom client name
 		ShortClientName: "My-WhatsApp-Client",
 		LongClientName:  "My-WhatsApp-Clientttttttttttttt",
+		ClientVersion: "2.2123.7", // Check the actual version here: https://developers.facebook.com/docs/whatsapp/changelog/
 	})
 	if err != nil {
 		panic(err)
