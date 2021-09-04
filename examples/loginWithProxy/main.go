@@ -21,7 +21,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	wac.SetClientVersion(2, 2123, 7) // Check the actual version here: https://developers.facebook.com/docs/whatsapp/changelog/
+
+	// Check the actual whatsapp web version via: wac.CheckCurrentServerVersion()
+	wac.SetClientVersion(2, 2134, 10)
 
 	qr := make(chan string)
 	go func() {

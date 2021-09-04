@@ -14,7 +14,8 @@ import (
 )
 
 wac, err := whatsapp.NewConn(20 * time.Second)
-wac.SetClientVersion(2, 2123, 7) // Check the actual version here: https://developers.facebook.com/docs/whatsapp/changelog/
+// Check the actual whatsapp web version via: whatsapp.CheckCurrentServerVersion()
+wac.SetClientVersion(2, 2134, 10)
 ```
 The duration passed to the NewConn function is used to timeout login requests. If you have a bad internet connection use a higher timeout value. This function only creates a websocket connection, it does not handle authentication.
 
