@@ -86,5 +86,4 @@ func TestUnmarshal_InvalidNode(t *testing.T) {
 		t.Errorf("err is expected to be %s but got %s", ErrInvalidNode, err)
 		t.Fail()
 	}
-
 }
