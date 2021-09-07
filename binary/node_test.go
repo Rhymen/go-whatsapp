@@ -1,6 +1,7 @@
 package binary
 
 import (
+	"errors"
 	"fmt"
 	"github.com/Rhymen/go-whatsapp/binary/proto"
 	"reflect"
@@ -70,4 +71,20 @@ func TestMarshal(t *testing.T) {
 		t.Errorf("content changed")
 		t.Fail()
 	}
+}
+
+func TestUnmarshal_InvalidNode(t *testing.T) {
+	invalidMsg := []byte("\x00\xff\x80")
+
+	gotNode, err := Unmarshal(invalidMsg)
+	if gotNode != nil {
+		t.Errorf("node is expected to be nil")
+		t.Fail()
+	}
+
+	if !errors.Is(err, ErrInvalidNode) {
+		t.Errorf("err is expected to be %s but got %s", ErrInvalidNode, err)
+		t.Fail()
+	}
+
 }
