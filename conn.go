@@ -79,14 +79,15 @@ type Conn struct {
 	loggedIn  bool
 	wg        *sync.WaitGroup
 
-	session        *Session
-	sessionLock    uint32
-	handler        []Handler
-	msgCount       int
-	msgTimeout     time.Duration
-	Info           *Info
-	Store          *Store
-	ServerLastSeen time.Time
+	session           *Session
+	sessionLock       uint32
+	handler           []Handler
+	msgCount          int
+	msgTimeout        time.Duration
+	Info              *Info
+	Store             *Store
+	ServerLastSeen    time.Time
+	CallSynchronously bool
 
 	timeTag string // last 3 digits obtained after a successful login takeover
 
@@ -125,32 +126,35 @@ func NewConn(timeout time.Duration) (*Conn, error) {
 func NewConnWithProxy(timeout time.Duration, proxy func(*http.Request) (*url.URL, error)) (*Conn, error) {
 	return NewConnWithOptions(&Options{
 		Timeout: timeout,
-		Proxy: proxy,
+		Proxy:   proxy,
 	})
 }
 
 // NewConnWithOptions Create a new connect with a given options.
 type Options struct {
-	Proxy            func(*http.Request) (*url.URL, error)
-	Timeout          time.Duration
-	Handler          []Handler
-	ShortClientName  string
-	LongClientName   string
-	ClientVersion    string
-	Store            *Store
+	Proxy             func(*http.Request) (*url.URL, error)
+	Timeout           time.Duration
+	Handler           []Handler
+	ShortClientName   string
+	LongClientName    string
+	ClientVersion     string
+	Store             *Store
+	CallSynchronously bool
 }
+
 func NewConnWithOptions(opt *Options) (*Conn, error) {
 	if opt == nil {
 		return nil, ErrOptionsNotProvided
 	}
 	wac := &Conn{
-		handler:    make([]Handler, 0),
-		msgCount:   0,
-		msgTimeout: opt.Timeout,
-		Store:      newStore(),
-		longClientName:  "github.com/Rhymen/go-whatsapp",
-		shortClientName: "go-whatsapp",
-		clientVersion:   "0.1.0",
+		handler:           make([]Handler, 0),
+		msgCount:          0,
+		msgTimeout:        opt.Timeout,
+		Store:             newStore(),
+		longClientName:    "github.com/Rhymen/go-whatsapp",
+		shortClientName:   "go-whatsapp",
+		clientVersion:     "0.1.0",
+		CallSynchronously: opt.CallSynchronously,
 	}
 	if opt.Handler != nil {
 		wac.handler = opt.Handler

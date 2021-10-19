@@ -20,11 +20,6 @@ type Handler interface {
 	HandleError(err error)
 }
 
-type SyncHandler interface {
-	Handler
-	ShouldCallSynchronously() bool
-}
-
 /*
 The TextMessageHandler interface needs to be implemented to receive text messages dispatched by the dispatcher.
 */
@@ -196,11 +191,6 @@ func (wac *Conn) RemoveHandlers() {
 	wac.handler = make([]Handler, 0)
 }
 
-func (wac *Conn) shouldCallSynchronously(handler Handler) bool {
-	sh, ok := handler.(SyncHandler)
-	return ok && sh.ShouldCallSynchronously()
-}
-
 func (wac *Conn) handle(message interface{}) {
 	wac.handleWithCustomHandlers(message, wac.handler)
 }
@@ -209,7 +199,7 @@ func (wac *Conn) handleWithCustomHandlers(message interface{}, handlers []Handle
 	switch m := message.(type) {
 	case error:
 		for _, h := range handlers {
-			if wac.shouldCallSynchronously(h) {
+			if wac.CallSynchronously {
 				h.HandleError(m)
 			} else {
 				go h.HandleError(m)
@@ -218,7 +208,7 @@ func (wac *Conn) handleWithCustomHandlers(message interface{}, handlers []Handle
 	case string:
 		for _, h := range handlers {
 			if x, ok := h.(JsonMessageHandler); ok {
-				if wac.shouldCallSynchronously(h) {
+				if wac.CallSynchronously {
 					x.HandleJsonMessage(m)
 				} else {
 					go x.HandleJsonMessage(m)
@@ -228,7 +218,7 @@ func (wac *Conn) handleWithCustomHandlers(message interface{}, handlers []Handle
 	case TextMessage:
 		for _, h := range handlers {
 			if x, ok := h.(TextMessageHandler); ok {
-				if wac.shouldCallSynchronously(h) {
+				if wac.CallSynchronously {
 					x.HandleTextMessage(m)
 				} else {
 					go x.HandleTextMessage(m)
@@ -238,7 +228,7 @@ func (wac *Conn) handleWithCustomHandlers(message interface{}, handlers []Handle
 	case ImageMessage:
 		for _, h := range handlers {
 			if x, ok := h.(ImageMessageHandler); ok {
-				if wac.shouldCallSynchronously(h) {
+				if wac.CallSynchronously {
 					x.HandleImageMessage(m)
 				} else {
 					go x.HandleImageMessage(m)
@@ -248,7 +238,7 @@ func (wac *Conn) handleWithCustomHandlers(message interface{}, handlers []Handle
 	case VideoMessage:
 		for _, h := range handlers {
 			if x, ok := h.(VideoMessageHandler); ok {
-				if wac.shouldCallSynchronously(h) {
+				if wac.CallSynchronously {
 					x.HandleVideoMessage(m)
 				} else {
 					go x.HandleVideoMessage(m)
@@ -258,7 +248,7 @@ func (wac *Conn) handleWithCustomHandlers(message interface{}, handlers []Handle
 	case AudioMessage:
 		for _, h := range handlers {
 			if x, ok := h.(AudioMessageHandler); ok {
-				if wac.shouldCallSynchronously(h) {
+				if wac.CallSynchronously {
 					x.HandleAudioMessage(m)
 				} else {
 					go x.HandleAudioMessage(m)
@@ -268,7 +258,7 @@ func (wac *Conn) handleWithCustomHandlers(message interface{}, handlers []Handle
 	case DocumentMessage:
 		for _, h := range handlers {
 			if x, ok := h.(DocumentMessageHandler); ok {
-				if wac.shouldCallSynchronously(h) {
+				if wac.CallSynchronously {
 					x.HandleDocumentMessage(m)
 				} else {
 					go x.HandleDocumentMessage(m)
@@ -278,7 +268,7 @@ func (wac *Conn) handleWithCustomHandlers(message interface{}, handlers []Handle
 	case LocationMessage:
 		for _, h := range handlers {
 			if x, ok := h.(LocationMessageHandler); ok {
-				if wac.shouldCallSynchronously(h) {
+				if wac.CallSynchronously {
 					x.HandleLocationMessage(m)
 				} else {
 					go x.HandleLocationMessage(m)
@@ -288,7 +278,7 @@ func (wac *Conn) handleWithCustomHandlers(message interface{}, handlers []Handle
 	case LiveLocationMessage:
 		for _, h := range handlers {
 			if x, ok := h.(LiveLocationMessageHandler); ok {
-				if wac.shouldCallSynchronously(h) {
+				if wac.CallSynchronously {
 					x.HandleLiveLocationMessage(m)
 				} else {
 					go x.HandleLiveLocationMessage(m)
@@ -299,7 +289,7 @@ func (wac *Conn) handleWithCustomHandlers(message interface{}, handlers []Handle
 	case StickerMessage:
 		for _, h := range handlers {
 			if x, ok := h.(StickerMessageHandler); ok {
-				if wac.shouldCallSynchronously(h) {
+				if wac.CallSynchronously {
 					x.HandleStickerMessage(m)
 				} else {
 					go x.HandleStickerMessage(m)
@@ -310,7 +300,7 @@ func (wac *Conn) handleWithCustomHandlers(message interface{}, handlers []Handle
 	case ContactMessage:
 		for _, h := range handlers {
 			if x, ok := h.(ContactMessageHandler); ok {
-				if wac.shouldCallSynchronously(h) {
+				if wac.CallSynchronously {
 					x.HandleContactMessage(m)
 				} else {
 					go x.HandleContactMessage(m)
@@ -321,7 +311,7 @@ func (wac *Conn) handleWithCustomHandlers(message interface{}, handlers []Handle
 	case BatteryMessage:
 		for _, h := range handlers {
 			if x, ok := h.(BatteryMessageHandler); ok {
-				if wac.shouldCallSynchronously(h) {
+				if wac.CallSynchronously {
 					x.HandleBatteryMessage(m)
 				} else {
 					go x.HandleBatteryMessage(m)
@@ -332,7 +322,7 @@ func (wac *Conn) handleWithCustomHandlers(message interface{}, handlers []Handle
 	case Contact:
 		for _, h := range handlers {
 			if x, ok := h.(NewContactHandler); ok {
-				if wac.shouldCallSynchronously(h) {
+				if wac.CallSynchronously {
 					x.HandleNewContact(m)
 				} else {
 					go x.HandleNewContact(m)
@@ -343,7 +333,7 @@ func (wac *Conn) handleWithCustomHandlers(message interface{}, handlers []Handle
 	case ProductMessage:
 		for _, h := range handlers {
 			if x, ok := h.(ProductMessageHandler); ok {
-				if wac.shouldCallSynchronously(h) {
+				if wac.CallSynchronously {
 					x.HandleProductMessage(m)
 				} else {
 					go x.HandleProductMessage(m)
@@ -354,7 +344,7 @@ func (wac *Conn) handleWithCustomHandlers(message interface{}, handlers []Handle
 	case OrderMessage:
 		for _, h := range handlers {
 			if x, ok := h.(OrderMessageHandler); ok {
-				if wac.shouldCallSynchronously(h) {
+				if wac.CallSynchronously {
 					x.HandleOrderMessage(m)
 				} else {
 					go x.HandleOrderMessage(m)
@@ -365,7 +355,7 @@ func (wac *Conn) handleWithCustomHandlers(message interface{}, handlers []Handle
 	case *proto.WebMessageInfo:
 		for _, h := range handlers {
 			if x, ok := h.(RawMessageHandler); ok {
-				if wac.shouldCallSynchronously(h) {
+				if wac.CallSynchronously {
 					x.HandleRawMessage(m)
 				} else {
 					go x.HandleRawMessage(m)
@@ -398,7 +388,7 @@ func (wac *Conn) handleContacts(contacts interface{}) {
 	}
 	for _, h := range wac.handler {
 		if x, ok := h.(ContactListHandler); ok {
-			if wac.shouldCallSynchronously(h) {
+			if wac.CallSynchronously {
 				x.HandleContactList(contactList)
 			} else {
 				go x.HandleContactList(contactList)
@@ -431,7 +421,7 @@ func (wac *Conn) handleChats(chats interface{}) {
 	}
 	for _, h := range wac.handler {
 		if x, ok := h.(ChatListHandler); ok {
-			if wac.shouldCallSynchronously(h) {
+			if wac.CallSynchronously {
 				x.HandleChatList(chatList)
 			} else {
 				go x.HandleChatList(chatList)
