@@ -603,6 +603,7 @@ func getDocumentProto(msg DocumentMessage) *proto.WebMessageInfo {
 			MediaKey:      msg.mediaKey,
 			FileEncSha256: msg.fileEncSha256,
 			FileSha256:    msg.fileSha256,
+			FileName:      &msg.FileName,
 			FileLength:    &msg.fileLength,
 			PageCount:     &msg.PageCount,
 			Title:         &msg.Title,
