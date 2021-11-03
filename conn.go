@@ -314,6 +314,20 @@ func (wac *Conn) autoUpdateMinorVersion() bool {
 		log.Printf("auto update failed after %d tries", AutoUpdateMaxRetries)
 		return false
 	}
+	if AutoUpdateIncrement == 0 {
+		log.Println("will try to obtain the latest version automatically")
+		newv, err := CheckCurrentServerVersion()
+		if err == nil && len(newv) >= 3 {
+			waVersionLock.Lock()
+			waVersion = newv
+			waVersionLock.Unlock()
+			wac.autoUpdateTries++
+			log.Printf("[auto update] latest server version: %v.%v.%v\n", newv[0], newv[1], newv[2])
+			return true
+		}
+		log.Println("auto update failed:", err)
+		return false
+	}
 	waVersionLock.Lock()
 	waVersion[1] += AutoUpdateIncrement
 	waVersionLock.Unlock()
