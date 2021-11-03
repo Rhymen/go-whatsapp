@@ -588,7 +588,7 @@ func isUpdateResponse(rawstr string) bool {
 	if len(v) < 2 {
 		return false
 	}
-	if v[0] == nil {
+	if v[0] == nil || v[1] == nil {
 		return false
 	}
 	if vs, _ := v[0].(string); vs != "Cmd" {
