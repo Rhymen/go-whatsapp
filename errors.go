@@ -22,6 +22,7 @@ var (
 	ErrInvalidWebsocket          = errors.New("invalid websocket")
 	ErrMessageTypeNotImplemented = errors.New("message type not implemented")
 	ErrOptionsNotProvided        = errors.New("new conn options not provided")
+	ErrUpdateRequired            = errors.New("waVersion not accepted (must update)")
 )
 
 type ErrConnectionFailed struct {

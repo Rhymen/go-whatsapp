@@ -2,6 +2,7 @@
 package whatsapp
 
 import (
+	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -94,6 +95,8 @@ type Conn struct {
 	shortClientName string
 	clientVersion   string
 
+	autoUpdateTries int // counter for auto update retries
+
 	loginSessionLock sync.RWMutex
 	Proxy            func(*http.Request) (*url.URL, error)
 
@@ -125,29 +128,30 @@ func NewConn(timeout time.Duration) (*Conn, error) {
 func NewConnWithProxy(timeout time.Duration, proxy func(*http.Request) (*url.URL, error)) (*Conn, error) {
 	return NewConnWithOptions(&Options{
 		Timeout: timeout,
-		Proxy: proxy,
+		Proxy:   proxy,
 	})
 }
 
 // NewConnWithOptions Create a new connect with a given options.
 type Options struct {
-	Proxy            func(*http.Request) (*url.URL, error)
-	Timeout          time.Duration
-	Handler          []Handler
-	ShortClientName  string
-	LongClientName   string
-	ClientVersion    string
-	Store            *Store
+	Proxy           func(*http.Request) (*url.URL, error)
+	Timeout         time.Duration
+	Handler         []Handler
+	ShortClientName string
+	LongClientName  string
+	ClientVersion   string
+	Store           *Store
 }
+
 func NewConnWithOptions(opt *Options) (*Conn, error) {
 	if opt == nil {
 		return nil, ErrOptionsNotProvided
 	}
 	wac := &Conn{
-		handler:    make([]Handler, 0),
-		msgCount:   0,
-		msgTimeout: opt.Timeout,
-		Store:      newStore(),
+		handler:         make([]Handler, 0),
+		msgCount:        0,
+		msgTimeout:      opt.Timeout,
+		Store:           newStore(),
 		longClientName:  "github.com/Rhymen/go-whatsapp",
 		shortClientName: "go-whatsapp",
 		clientVersion:   "0.1.0",
@@ -299,4 +303,20 @@ func (wac *Conn) IsLoggedIn() bool {
 // Deprecated: function name is not go idiomatic, use IsLoggedIn instead.
 func (wac *Conn) GetLoggedIn() bool {
 	return wac.loggedIn
+}
+
+func (wac *Conn) autoUpdateMinorVersion() bool {
+	if !AutoUpdate {
+		return false
+	}
+	log.Println("received update command from the WhatsApp API")
+	if wac.autoUpdateTries > AutoUpdateMaxRetries {
+		log.Printf("auto update failed after %d tries", AutoUpdateMaxRetries)
+		return false
+	}
+	waVersionLock.Lock()
+	waVersion[1] += AutoUpdateIncrement
+	waVersionLock.Unlock()
+	wac.autoUpdateTries++
+	return true
 }

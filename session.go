@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -19,6 +20,21 @@ import (
 
 //represents the WhatsAppWeb client version
 var waVersion = []int{2, 2142, 12}
+var waVersionLock sync.RWMutex
+
+var (
+	// AutoUpdate will automatically bump the client (minor) version if true
+	AutoUpdate = false
+
+	// AutoUpdateIncrement will increment the client version if AutoUpdate is true and if the `["Cmd",{"type":"update"}]` data is received
+	AutoUpdateIncrement = 5
+
+	// AutoUpdateMaxRetries will set the maximum number of retries to update the client version (prevents an infinite loop)
+	AutoUpdateMaxRetries = 100
+
+	// AutoUpdateRetryDelay will set the delay between retries to update the client version
+	AutoUpdateRetryDelay = time.Millisecond * 300
+)
 
 /*
 Session contains session individual information. To be able to resume the connection without scanning the qr code
@@ -151,14 +167,18 @@ func (wac *Conn) SetClientName(long, short string, version string) error {
 
 /*
 SetClientVersion sets WhatsApp client version
-Default value is 0.4.2080
+Default value is 0.4.2142
 */
 func (wac *Conn) SetClientVersion(major int, minor int, patch int) {
+	waVersionLock.Lock()
+	defer waVersionLock.Unlock()
 	waVersion = []int{major, minor, patch}
 }
 
 // GetClientVersion returns WhatsApp client version
 func (wac *Conn) GetClientVersion() []int {
+	waVersionLock.RLock()
+	defer waVersionLock.RUnlock()
 	return waVersion
 }
 
@@ -213,7 +233,12 @@ func (wac *Conn) Login(qrChan chan<- string) (Session, error) {
 	}
 
 	session.ClientId = base64.StdEncoding.EncodeToString(clientId)
-	login := []interface{}{"admin", "init", waVersion, []string{wac.longClientName, wac.shortClientName, wac.clientVersion}, session.ClientId, true}
+
+	waVersionLock.RLock()
+	version := waVersion
+	waVersionLock.RUnlock()
+
+	login := []interface{}{"admin", "init", version, []string{wac.longClientName, wac.shortClientName, wac.clientVersion}, session.ClientId, true}
 	loginChan, err := wac.writeJson(login)
 	if err != nil {
 		return session, fmt.Errorf("error writing login: %v\n", err)
@@ -373,8 +398,12 @@ func (wac *Conn) Restore() error {
 	wac.listener.m["s1"] = s1
 	wac.listener.Unlock()
 
+	waVersionLock.RLock()
+	version := waVersion
+	waVersionLock.RUnlock()
+
 	//admin init
-	init := []interface{}{"admin", "init", waVersion, []string{wac.longClientName, wac.shortClientName, wac.clientVersion}, wac.session.ClientId, true}
+	init := []interface{}{"admin", "init", version, []string{wac.longClientName, wac.shortClientName, wac.clientVersion}, wac.session.ClientId, true}
 	initChan, err := wac.writeJson(init)
 	if err != nil {
 		return fmt.Errorf("error writing admin init: %v\n", err)
@@ -391,6 +420,12 @@ func (wac *Conn) Restore() error {
 	case r := <-initChan:
 		var resp map[string]interface{}
 		if err = json.Unmarshal([]byte(r), &resp); err != nil {
+			if isUpdateResponse(r) {
+				if wac.autoUpdateMinorVersion() {
+					return wac.Restore()
+				}
+				return ErrUpdateRequired
+			}
 			return fmt.Errorf("error decoding login connResp: %v\n", err)
 		}
 
@@ -418,6 +453,12 @@ func (wac *Conn) Restore() error {
 		case r := <-loginChan:
 			var resp map[string]interface{}
 			if err = json.Unmarshal([]byte(r), &resp); err != nil {
+				if isUpdateResponse(r) {
+					if wac.autoUpdateMinorVersion() {
+						return wac.Restore()
+					}
+					return ErrUpdateRequired
+				}
 				return fmt.Errorf("error decoding login connResp: %v\n", err)
 			}
 			if int(resp["status"].(float64)) != 200 {
@@ -459,6 +500,12 @@ func (wac *Conn) Restore() error {
 		var resp map[string]interface{}
 		if err = json.Unmarshal([]byte(r), &resp); err != nil {
 			wac.timeTag = ""
+			if isUpdateResponse(r) {
+				if wac.autoUpdateMinorVersion() {
+					return wac.Restore()
+				}
+				return ErrUpdateRequired
+			}
 			return fmt.Errorf("error decoding login connResp: %v\n", err)
 		}
 
@@ -529,4 +576,37 @@ func (wac *Conn) Logout() error {
 	wac.loggedIn = false
 
 	return nil
+}
+
+// isUpdateResponse tests if rawstr is `["Cmd",{"type":"update"}]`
+func isUpdateResponse(rawstr string) bool {
+	v := []interface{}{}
+	err := json.Unmarshal([]byte(rawstr), &v)
+	if err != nil {
+		return false
+	}
+	if len(v) < 2 {
+		return false
+	}
+	if v[0] == nil {
+		return false
+	}
+	if vs, _ := v[0].(string); vs != "Cmd" {
+		return false
+	}
+	cmd := struct {
+		Type string `json:"type"`
+	}{}
+	rawcmd, ok := v[1].(string)
+	if !ok {
+		return false
+	}
+	err = json.Unmarshal([]byte(rawcmd), &cmd)
+	if err != nil {
+		return false
+	}
+	if cmd.Type != "update" {
+		return false
+	}
+	return true
 }
