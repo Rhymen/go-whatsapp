@@ -597,18 +597,14 @@ func isUpdateResponse(rawstr string) bool {
 	if vs, _ := v[0].(string); vs != "Cmd" {
 		return false
 	}
-	cmd := struct {
-		Type string `json:"type"`
-	}{}
-	rawcmd, ok := v[1].(string)
+	rawcmd, ok := v[1].(map[string]interface{})
 	if !ok {
 		return false
 	}
-	err = json.Unmarshal([]byte(rawcmd), &cmd)
-	if err != nil {
+	if rawcmd["type"] == nil {
 		return false
 	}
-	if cmd.Type != "update" {
+	if cmdtype, _ := rawcmd["type"]; cmdtype != "update" {
 		return false
 	}
 	return true
