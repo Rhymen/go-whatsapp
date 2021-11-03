@@ -26,7 +26,10 @@ var (
 	// AutoUpdate will automatically bump the client (minor) version if true
 	AutoUpdate = false
 
-	// AutoUpdateIncrement will increment the client version if AutoUpdate is true and if the `["Cmd",{"type":"update"}]` data is received
+	// AutoUpdateIncrement will increment the client version if AutoUpdate is true and if the
+	// `["Cmd",{"type":"update"}]` data is received.
+	// It will use the CheckCurrentServerVersion() function to get the latest version if
+	// AutoUpdateIncrement == 0.
 	AutoUpdateIncrement = 5
 
 	// AutoUpdateMaxRetries will set the maximum number of retries to update the client version (prevents an infinite loop)
