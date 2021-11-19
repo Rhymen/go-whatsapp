@@ -18,7 +18,7 @@ import (
 )
 
 //represents the WhatsAppWeb client version
-var waVersion = []int{2, 2121, 6}
+var waVersion = []int{2, 2142, 12}
 
 /*
 Session contains session individual information. To be able to resume the connection without scanning the qr code
@@ -525,6 +525,8 @@ func (wac *Conn) Logout() error {
 	if err != nil {
 		return fmt.Errorf("error writing logout: %v\n", err)
 	}
+
+	wac.loggedIn = false
 
 	return nil
 }
