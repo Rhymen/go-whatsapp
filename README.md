@@ -3,7 +3,7 @@ Package rhymen/go-whatsapp implements the WhatsApp Web API to provide a clean in
 
 ## Warning
 
-This package is not being actively maintained currently and will soon be unusuable as WhatsApp updates to multi-device. Please look at [adiwajshing/Baileys](https://github.com/adiwajshing/Baileys/tree/multi-device) for a NodeJS WhatsApp Web API that is actively maintained and supports WhatsApp multi-device.
+This package is not being actively maintained currently and will soon be unusuable as WhatsApp updates to multi-device. Please look at [tulir/whatsmeow](https://github.com/tulir/whatsmeow) for a Go WhatsApp Web API that is actively maintained and supports WhatsApp multi-device.
 
 ## Installation
 ```sh
