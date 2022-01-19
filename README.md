@@ -1,6 +1,10 @@
 # go-whatsapp
 Package rhymen/go-whatsapp implements the WhatsApp Web API to provide a clean interface for developers. Big thanks to all contributors of the [sigalor/whatsapp-web-reveng](https://github.com/sigalor/whatsapp-web-reveng) project. The official WhatsApp Business API was released in August 2018. You can check it out [here](https://www.whatsapp.com/business/api).
 
+## Warning
+
+This package is not being actively maintained currently and will soon be unusuable as WhatsApp updates to multi-device. Please look at [tulir/whatsmeow](https://github.com/tulir/whatsmeow) for a Go WhatsApp Web API that is actively maintained and supports WhatsApp multi-device.
+
 ## Installation
 ```sh
 go get github.com/Rhymen/go-whatsapp
