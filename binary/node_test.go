@@ -2,9 +2,10 @@ package binary
 
 import (
 	"fmt"
-	"github.com/Rhymen/go-whatsapp/binary/proto"
 	"reflect"
 	"testing"
+
+	"github.com/Rhymen/go-whatsapp/binary/proto"
 )
 
 func TestMarshal(t *testing.T) {
@@ -19,7 +20,7 @@ func TestMarshal(t *testing.T) {
 		}
 		*msg.Message.Conversation = "Testnachricht."
 
-		msg.Status = new(proto.WebMessageInfo_WEB_MESSAGE_INFO_STATUS)
+		msg.Status = new(proto.WebMessageInfo_WebMessageInfoStatus)
 		*msg.Status = proto.WebMessageInfo_ERROR
 
 		msg.Key = &proto.MessageKey{
