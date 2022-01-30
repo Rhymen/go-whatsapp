@@ -114,6 +114,22 @@ type OrderMessageHandler interface {
 }
 
 /*
+The ListMessageHandler interface needs to be implemented to receive list messages dispatched by the dispatcher.
+*/
+type ListMessageHandler interface {
+	Handler
+	HandleListMessage(message ListMessage)
+}
+
+/*
+The ListMessageHandler interface needs to be implemented to receive list response messages dispatched by the dispatcher.
+*/
+type ListResponseMessageHandler interface {
+	Handler
+	HandleListResponseMessage(message ListResponseMessage)
+}
+
+/*
 The JsonMessageHandler interface needs to be implemented to receive json messages dispatched by the dispatcher.
 These json messages contain status updates of every kind sent by WhatsAppWeb servers. WhatsAppWeb uses these messages
 to built a Store, which is used to save these "secondary" information. These messages may contain
@@ -358,6 +374,28 @@ func (wac *Conn) handleWithCustomHandlers(message interface{}, handlers []Handle
 					x.HandleOrderMessage(m)
 				} else {
 					go x.HandleOrderMessage(m)
+				}
+			}
+		}
+
+	case ListMessage:
+		for _, h := range handlers {
+			if x, ok := h.(ListMessageHandler); ok {
+				if wac.shouldCallSynchronously(h) {
+					x.HandleListMessage(m)
+				} else {
+					go x.HandleListMessage(m)
+				}
+			}
+		}
+
+	case ListResponseMessage:
+		for _, h := range handlers {
+			if x, ok := h.(ListResponseMessageHandler); ok {
+				if wac.shouldCallSynchronously(h) {
+					x.HandleListResponseMessage(m)
+				} else {
+					go x.HandleListResponseMessage(m)
 				}
 			}
 		}
