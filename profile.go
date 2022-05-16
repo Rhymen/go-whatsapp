@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Rhymen/go-whatsapp/binary"
+	"github.com/bisohns/go-whatsapp/binary"
 )
 
 // Pictures must be JPG 640x640 and 96x96, respectively

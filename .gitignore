@@ -1,3 +1,6 @@
 .idea/
 docs/
 build/
+*.swn
+*.swo
+*.swp
