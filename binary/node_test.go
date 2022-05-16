@@ -2,9 +2,10 @@ package binary
 
 import (
 	"fmt"
-	"github.com/Rhymen/go-whatsapp/binary/proto"
 	"reflect"
 	"testing"
+
+	"github.com/bisohns/go-whatsapp/binary/proto"
 )
 
 func TestMarshal(t *testing.T) {

@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Rhymen/go-whatsapp/binary"
-	"github.com/Rhymen/go-whatsapp/crypto/cbc"
+	"github.com/bisohns/go-whatsapp/binary"
+	"github.com/bisohns/go-whatsapp/crypto/cbc"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 )

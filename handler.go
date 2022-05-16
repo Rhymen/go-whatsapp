@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Rhymen/go-whatsapp/binary"
-	"github.com/Rhymen/go-whatsapp/binary/proto"
+	"github.com/bisohns/go-whatsapp/binary"
+	"github.com/bisohns/go-whatsapp/binary/proto"
 )
 
 /*

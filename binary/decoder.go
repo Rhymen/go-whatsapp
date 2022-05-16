@@ -2,9 +2,10 @@ package binary
 
 import (
 	"fmt"
-	"github.com/Rhymen/go-whatsapp/binary/token"
 	"io"
 	"strconv"
+
+	"github.com/bisohns/go-whatsapp/binary/token"
 )
 
 type binaryDecoder struct {
