@@ -22,6 +22,9 @@ func main() {
 		panic(err)
 	}
 
+	// Check the actual whatsapp web version via: wac.CheckCurrentServerVersion()
+	wac.SetClientVersion(2, 2134, 10)
+
 	qr := make(chan string)
 	go func() {
 		terminal := qrcodeTerminal.New()
