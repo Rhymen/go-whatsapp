@@ -44,7 +44,7 @@ func (h *waHandler) HandleError(err error) {
 			log.Fatalf("Restore failed: %v", err)
 		}
 	} else {
-		log.Printf("error occoured: %v\n", err)
+		log.Printf("error occurred: %v\n", err)
 	}
 }
 
