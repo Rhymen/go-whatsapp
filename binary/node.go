@@ -1,10 +1,12 @@
 package binary
 
 import (
-	"fmt"
+	"errors"
 	pb "github.com/Rhymen/go-whatsapp/binary/proto"
 	"github.com/golang/protobuf/proto"
 )
+
+var ErrInvalidNode = errors.New("invalid Node")
 
 type Node struct {
 	Description string
@@ -42,7 +44,7 @@ func marshalMessageArray(messages []interface{}) ([]Node, error) {
 		} else {
 			ret[i], ok = m.(Node)
 			if !ok {
-				return nil, fmt.Errorf("invalid Node")
+				return nil, ErrInvalidNode
 			}
 		}
 	}

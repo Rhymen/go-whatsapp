@@ -109,7 +109,7 @@ func (r *binaryDecoder) readPacked8(tag int) (string, error) {
 		ret += lower + upper
 	}
 
-	if startByte>>7 != 0 {
+	if startByte>>7 != 0 && len(ret) != 0 {
 		ret = ret[:len(ret)-1]
 	}
 	return ret, nil
