@@ -23,8 +23,13 @@ type Contact struct {
 type Chat struct {
 	Jid             string
 	Name            string
+	// Number of unread messages
+	// -1 if marked as unread
 	Unread          string
 	LastMessageTime string
+	// Unix timestamp of when to unmute notifications
+	// 0 if notifications are not muted
+	// -1 if notifications are muted for "Always"
 	IsMuted         string
 	IsMarkedSpam    string
 }
