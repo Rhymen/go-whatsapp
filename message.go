@@ -99,11 +99,14 @@ func (wac *Conn) Send(msg interface{}) (string, error) {
 }
 
 func (wac *Conn) sendProto(p *proto.WebMessageInfo) (<-chan string, error) {
+	wac.writerLock.RLock()
+	msgCount := wac.msgCount
+	wac.writerLock.RUnlock()
 	n := binary.Node{
 		Description: "action",
 		Attributes: map[string]string{
 			"type":  "relay",
-			"epoch": strconv.Itoa(wac.msgCount),
+			"epoch": strconv.Itoa(msgCount),
 		},
 		Content: []interface{}{p},
 	}
