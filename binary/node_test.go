@@ -20,7 +20,7 @@ func TestMarshal(t *testing.T) {
 		}
 		*msg.Message.Conversation = "Testnachricht."
 
-		msg.Status = new(proto.WebMessageInfo_WEB_MESSAGE_INFO_STATUS)
+		msg.Status = new(proto.WebMessageInfo_WebMessageInfoStatus)
 		*msg.Status = proto.WebMessageInfo_ERROR
 
 		msg.Key = &proto.MessageKey{
@@ -85,5 +85,16 @@ func TestUnmarshal_InvalidNode(t *testing.T) {
 	if !errors.Is(err, ErrInvalidNode) {
 		t.Errorf("err is expected to be %s but got %s", ErrInvalidNode, err)
 		t.Fail()
+	}
+}
+
+func TestMarshal_InvalidWebMessageInfoReturnsError(t *testing.T) {
+	node := Node{
+		Description: "action",
+		Attributes:  map[string]string{"type": "set"},
+		Content:     []interface{}{&proto.WebMessageInfo{}},
+	}
+	if _, err := Marshal(node); err == nil {
+		t.Fatal("Marshal() returned nil error for WebMessageInfo missing its required key")
 	}
 }

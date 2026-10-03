@@ -38,7 +38,7 @@ func marshalMessageArray(messages []interface{}) ([]Node, error) {
 		if wmi, ok := m.(*pb.WebMessageInfo); ok {
 			b, err := marshalWebMessageInfo(wmi)
 			if err != nil {
-				return nil, nil
+				return nil, err
 			}
 			ret[i] = Node{"message", nil, b}
 		} else {
