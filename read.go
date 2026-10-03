@@ -56,6 +56,10 @@ func (wac *Conn) readPump() {
 }
 
 func (wac *Conn) processReadData(msgType int, msg []byte) error {
+	if len(msg) == 0 {
+		return ErrInvalidWsData
+	}
+
 	data := strings.SplitN(string(msg), ",", 2)
 
 	if data[0][0] == '!' { //Keep-Alive Timestamp
