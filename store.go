@@ -148,8 +148,8 @@ func (sr *Store) AddChat(chat Chat) error {
 		return errors.New("jit cannot be empty ")
 	}
 
-	defer sr.RUnlock()
-	sr.RLock()
+	defer sr.Unlock()
+	sr.Lock()
 
 	jid := strings.Replace(chat.Jid, "@c.us", "@s.whatsapp.net", 1)
 	sr.Chats[jid] = chat
